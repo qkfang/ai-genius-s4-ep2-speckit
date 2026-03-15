@@ -21,6 +21,14 @@ const chalk = require('chalk');
 const { parseSpec } = require('./lib/parser');
 const { validateSpec } = require('./lib/validator');
 const { generatePipeline } = require('./lib/pipeline-generator');
+const {
+  validateChangeSpec,
+  extractRisk,
+  extractComponents,
+  extractPromotionRules,
+  evaluatePromotionGate,
+  generateSummary,
+} = require('./lib/spec-extractor');
 
 const VERSION = require('../package.json').version;
 
@@ -162,6 +170,85 @@ program
 
     console.log(chalk.bold('\n─── Generated Workflow ────────────────────────────'));
     console.log(workflow);
+  });
+
+// ─── extract ─────────────────────────────────────────────────────────────────
+program
+  .command('extract <spec>')
+  .description('Extract risk, breaking change metadata, and promotion rules from a change spec')
+  .option('-o, --output <file>', 'Write Markdown summary to this file path')
+  .option('--env <environment>', 'Evaluate the promotion gate for the given environment')
+  .action((specPath, opts) => {
+    const absPath = path.resolve(specPath);
+    console.log(chalk.cyan(`\n📊 SpecKit › Extracting metadata from: ${absPath}\n`));
+
+    let spec;
+    try {
+      spec = parseSpec(absPath);
+    } catch (err) {
+      console.error(chalk.red(`❌ Parse error: ${err.message}`));
+      process.exit(1);
+    }
+
+    const { valid, errors } = validateChangeSpec(spec);
+    if (!valid) {
+      console.error(chalk.red(`❌ Change spec validation failed with ${errors.length} error(s):\n`));
+      errors.forEach((e) => console.error(chalk.red(`  • ${e}`)));
+      process.exit(1);
+    }
+
+    const { risk, breaking, type, rationale } = extractRisk(spec);
+    const components = extractComponents(spec);
+    const rules = extractPromotionRules(spec);
+
+    const riskColour = risk === 'high' ? chalk.red : risk === 'medium' ? chalk.yellow : chalk.green;
+
+    console.log(chalk.bold('─── Change Metadata ───────────────────────────────'));
+    console.log(chalk.white(`  Title:    ${spec.change.title}`));
+    console.log(chalk.white(`  Type:     ${type}`));
+    console.log(riskColour(`  Risk:     ${risk.toUpperCase()}`));
+    console.log(breaking ? chalk.red('  Breaking: YES') : chalk.green('  Breaking: No'));
+    console.log(chalk.grey(`  Rationale: ${rationale}`));
+
+    if (components.length > 0) {
+      console.log(chalk.bold('\n─── Affected Components ───────────────────────────'));
+      components.forEach((c) => {
+        console.log(chalk.grey(`  • ${c.name} (${c.impact || 'modified'})`));
+      });
+    }
+
+    console.log(chalk.bold('\n─── Promotion Rules ───────────────────────────────'));
+    console.log(chalk.grey(`  Required approvals:    ${rules.require_approvals}`));
+    console.log(chalk.grey(`  Passing tests:         ${rules.require_passing_tests}`));
+    console.log(chalk.grey(`  Security scan:         ${rules.require_security_scan}`));
+    console.log(chalk.grey(`  Environments:          ${rules.environments.join(' → ')}`));
+
+    if (opts.env) {
+      const { blocked, reasons } = evaluatePromotionGate(spec, opts.env);
+      console.log(chalk.bold(`\n─── Gate: ${opts.env} ──────────────────────────────`));
+      if (blocked) {
+        console.error(chalk.red(`  🔴 BLOCKED — ${reasons.length} reason(s):`));
+        reasons.forEach((r) => console.error(chalk.red(`     • ${r}`)));
+        process.exit(2);
+      } else {
+        console.log(chalk.green('  🟢 CLEAR — all promotion gates passed'));
+      }
+    }
+
+    const summary = generateSummary(spec);
+
+    if (opts.output) {
+      const outPath = path.resolve(opts.output);
+      const outDir = path.dirname(outPath);
+      if (!fs.existsSync(outDir)) {
+        fs.mkdirSync(outDir, { recursive: true });
+      }
+      fs.writeFileSync(outPath, summary, 'utf8');
+      console.log(chalk.green(`\n✅ Summary written to: ${outPath}`));
+    } else {
+      console.log(chalk.bold('\n─── Spec Summary (Markdown) ───────────────────────'));
+      console.log(summary);
+    }
   });
 
 program.parse(process.argv);

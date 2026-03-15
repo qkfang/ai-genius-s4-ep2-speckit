@@ -1,11 +1,15 @@
-# AI Genius Episode 2 — SpecKit: Step-by-Step Demo Guide
+# AI Genius Episode 2 — SpecKit: Practical DevOps Controls
 
-> **1-Hour Hands-On Session: Agentic DevOps — Turn Specs into CI/CD Using GitHub Actions**
+> **60-Minute Hands-On Session: Practical SpecKit DevOps — Turn Specs into CI/CD Controls**
 >
 > This guide is written for the presenter. Every step has been tested and timed.
 > Follow the steps in order; each section includes the exact prompts, commands,
 > and expected output so you can demo confidently and recover quickly if anything
 > goes wrong.
+>
+> **Core message:** In many teams, CI/CD only validates code. In this session we
+> make the pipeline validate *intent*. The spec becomes a first-class DevOps
+> artifact that gates merges and releases.
 
 ---
 
@@ -13,662 +17,694 @@
 
 | Section | Topic | Clock Time |
 |---------|-------|-----------|
-| [Part 1](#part-1--introduction-and-setup-010-min) | Introduction & Setup | 0 – 10 min |
-| [Part 2](#part-2--explore-the-spec-file-1025-min) | Explore the Spec File | 10 – 25 min |
-| [Part 3](#part-3--speckit-engine-deep-dive-2540-min) | SpecKit Engine Deep Dive | 25 – 40 min |
-| [Part 4](#part-4--github-actions-integration-4055-min) | GitHub Actions Integration | 40 – 55 min |
-| [Part 5](#part-5--live-change-spec--pipeline-adapts-5560-min) | Live Demo: Spec → Pipeline Adapts | 55 – 60 min |
+| [Part 1](#part-1--end-state-and-why-it-matters-05-min) | End State and Why It Matters | 0 – 5 min |
+| [Part 2](#part-2--the-change-spec-artifact-515-min) | The Change Spec Artifact | 5 – 15 min |
+| [Part 3](#part-3--enforce-spec-presence-in-ci-1525-min) | Enforce Spec Presence in CI | 15 – 25 min |
+| [Part 4](#part-4--extract-metadata-and-generate-a-summary-2540-min) | Extract Metadata and Generate a Summary | 25 – 40 min |
+| [Part 5](#part-5--apply-promotion-rules-4055-min) | Apply Promotion Rules | 40 – 55 min |
+| [Part 6](#part-6--live-demo-the-full-loop-5560-min) | Live Demo: The Full Loop | 55 – 60 min |
 
 ---
 
 ## Prerequisites
 
-Before the session starts, verify these are installed:
+Before the session starts, verify:
 
 ```bash
 node --version   # must be >= 18 (ideally 20)
-npm --version    # any recent version
+npm --version
 git --version
 ```
 
 You need:
 - The repository cloned locally (or opened in GitHub Codespaces / VS Code Dev Container)
-- A GitHub account with the repo forked (for the GitHub Actions live demo in Part 4–5)
+- A GitHub account with the repo forked (for the GitHub Actions live demo in Parts 3–6)
 
 ---
 
-## Part 1 — Introduction and Setup (0–10 min)
+## Part 1 — End State and Why It Matters (0–5 min)
 
-### Step 1.1 — Clone and install ⏱️ ~30 seconds
+### Step 1.1 — Show the end state ⏱️ ~3 minutes
 
 **What to say:**
-> "Let's start from a clean clone — this is exactly what any new team member would do."
+> "Let me show you where we end up before we explain how we get there. This is the
+> repo we're working with — and by the end of this session, every PR into it will be
+> gated by a structured spec artifact, not tribal knowledge."
+
+Show the project tree (or walk through it in your editor):
+
+```
+ai-genius-ep2-speckit/
+├── specs/
+│   ├── app.spec.yaml        ← application lifecycle spec (runtime, stages)
+│   └── change.spec.yaml     ← 🎯 per-PR change spec: risk, breaking, promotion rules
+├── speckit/lib/
+│   ├── parser.js
+│   ├── validator.js
+│   ├── spec-extractor.js    ← extracts metadata and evaluates promotion gates
+│   └── pipeline-generator.js
+└── .github/workflows/
+    ├── spec-enforcer.yml    ← blocks PRs without a spec
+    └── spec-gate.yml        ← applies promotion rules before deployment
+```
+
+**Key message:**
+> "Two spec files, two new workflows, one new library module. That's all it takes to
+> make CI/CD validate intent instead of just code."
+
+---
+
+### Step 1.2 — Install and verify ⏱️ ~2 minutes
 
 ```bash
 git clone https://github.com/qkfang/ai-genius-ep2-speckit
 cd ai-genius-ep2-speckit
 npm install
-```
-
-**Expected output (last lines):**
-```
-added 68 packages, and audited 69 packages in 3s
-found 0 vulnerabilities
-```
-
-> **Timing note:** `npm install` takes ~3 seconds on a fresh clone (packages already cached) or ~15 seconds on first run.
-
----
-
-### Step 1.2 — Tour the project structure ⏱️ ~3 minutes
-
-**What to say:**
-> "Here's how the project is organized. There are four main areas."
-
-Open the project in your editor and walk through each folder, or run:
-
-```bash
-# Show the top-level structure
-ls -1
-```
-
-**Point out:**
-
-| Folder / File | Role |
-|---|---|
-| `specs/app.spec.yaml` | 🎯 **THE spec** — this is the only file you edit to change the pipeline |
-| `speckit/` | The SpecKit engine: parser, validator, pipeline-generator |
-| `src/` | Sample Express.js application |
-| `tests/` | Jest test suite (32 tests) |
-| `.github/workflows/` | GitHub Actions workflows |
-
-**Key message:**
-> "The big idea: instead of hand-writing GitHub Actions YAML, you write a simple spec file and let SpecKit generate the pipeline. Change the spec → the pipeline adapts. That's the agentic pattern."
-
----
-
-### Step 1.3 — Verify everything works ⏱️ ~2 minutes
-
-**What to say:**
-> "Let's make sure all 32 tests pass before we touch anything."
-
-```bash
 npm test
 ```
 
 **Expected output:**
 ```
-Tests:       32 passed, 32 total
+Tests:       57 passed, 57 total
 Test Suites: 2 passed, 2 total
-Time:        ~1.3s
+Time:        ~0.9s
 ```
-
-> **Timing note:** Tests run in ~1.3 seconds.
-
-If any tests fail, stop and check that `npm install` ran successfully.
 
 ---
 
-## Part 2 — Explore the Spec File (10–25 min)
+## Part 2 — The Change Spec Artifact (5–15 min)
 
-### Step 2.1 — Open and read the spec ⏱️ ~3 minutes
+### Step 2.1 — Introduce the concept ⏱️ ~2 minutes
 
 **What to say:**
-> "This YAML file is the single source of truth for your entire pipeline. Let's read it together."
-
-Open `specs/app.spec.yaml` in your editor, or print it:
-
-```bash
-cat specs/app.spec.yaml
-```
-
-**Walk through each section out loud:**
-
-1. **App metadata** — `name`, `description`, `version`
-2. **Runtime** — `runtime: node`, `runtimeVersion: "20"` — SpecKit uses this to choose the right setup action and commands
-3. **Pipeline triggers** — push to `main`/`develop`, pull requests, manual dispatch
-4. **Stages** — 7 stages: Lint → Build → Test → Security Scan → Deploy Staging → Deploy Production → Notify
-
-**Key talking point:**
-> "Notice there's no GitHub Actions YAML here — no `runs-on`, no `uses: actions/checkout@v4`, no `steps`. The spec is a high-level description of *what* you want. SpecKit figures out *how* to do it."
+> "Most CI/CD pipelines validate that the code builds and tests pass. That's necessary
+> but not sufficient. We also want to know: what is this change? Is it risky? Does it
+> break existing contracts? What environments is it allowed to reach?
+>
+> We answer those questions with a *change spec* — a small YAML file committed with
+> every pull request."
 
 ---
 
-### Step 2.2 — Validate the spec ⏱️ ~15 seconds
-
-**What to say:**
-> "Before generating anything, SpecKit can validate the spec for correctness."
+### Step 2.2 — Open and read the change spec ⏱️ ~5 minutes
 
 ```bash
-npm run speckit:validate
+cat specs/change.spec.yaml
+```
+
+Walk through each section:
+
+**1. What is this change?**
+```yaml
+change:
+  title: "Add user-facing health dashboard endpoint"
+  type: feature        # feature | fix | chore | breaking | release
+  description: >
+    Adds a new /api/dashboard route...
+```
+> "The `title` and `type` give reviewers immediate context. No more reading 20 commit
+> messages to understand what a PR does."
+
+**2. Risk assessment:**
+```yaml
+  risk: low              # low | medium | high
+  breaking: false
+```
+> "The author declares risk level and whether existing contracts are broken. The pipeline
+> trusts this but also *enforces consequences* — a `breaking: true` flag blocks production."
+
+**3. Affected components:**
+```yaml
+  components:
+    - name: api-gateway
+      impact: modified
+    - name: health-service
+      impact: new
+```
+> "Explicitly listing touched components is useful for reviewers and for post-incident
+> analysis. Which PRs touched the payment service last week? Now you can query the specs."
+
+**4. Promotion rules:**
+```yaml
+  promotion:
+    require_approvals: 1
+    require_passing_tests: true
+    environments:
+      - staging
+      - production
+```
+> "The change spec declares where it *wants* to go and what gates must pass. The pipeline
+> enforces it."
+
+---
+
+### Step 2.3 — Validate the change spec ⏱️ ~1 minute
+
+**What to say:**
+> "SpecKit can validate the change spec just like it validates the app spec."
+
+```bash
+npm run speckit:extract
 ```
 
 **Expected output:**
 ```
-🔍 SpecKit › Validating spec: .../specs/app.spec.yaml
+📊 SpecKit › Extracting metadata from: .../specs/change.spec.yaml
 
-✅ Spec is valid!
-   Name:    ai-genius-speckit-demo
-   Runtime: node
-   Stages:  Lint → Build → Test → Security Scan → Deploy Staging → Deploy Production → Notify
+─── Change Metadata ───────────────────────────────
+  Title:    Add user-facing health dashboard endpoint
+  Type:     feature
+  Risk:     LOW
+  Breaking: No
+  Rationale: Low-risk change — isolated, additive, and fully tested.
+
+─── Affected Components ───────────────────────────
+  • api-gateway (modified)
+  • health-service (new)
+
+─── Promotion Rules ───────────────────────────────
+  Required approvals:    1
+  Passing tests:         true
+  Security scan:         false
+  Environments:          staging → production
 ```
-
-> **Timing note:** Validation runs in ~0.15 seconds.
 
 ---
 
-### Step 2.3 — Intentionally break the spec ⏱️ ~3 minutes (interactive demo)
+### Step 2.4 — Intentionally break the spec ⏱️ ~3 minutes (interactive demo)
 
 **What to say:**
-> "Let's see what happens when the spec has an error. I'll remove the `environment` field from a deploy stage — that's a required field."
+> "Let's see what happens when a developer forgets a required field."
 
-Edit `specs/app.spec.yaml`. Comment out or remove the `environment: staging` line under "Deploy Staging":
+Edit `specs/change.spec.yaml` — remove the `risk` line:
 
 ```yaml
-  - name: Deploy Staging
-    type: deploy
-    # environment: staging   ← temporarily remove this line
-    strategy: blue-green
+change:
+  title: "Add dashboard"
+  type: feature
+  # risk: low   ← removed
+  breaking: false
 ```
 
-Then run validate again:
-
+Then run:
 ```bash
-npm run speckit:validate
+npm run speckit:extract
 ```
 
 **Expected output:**
 ```
-❌ Spec validation failed with 1 error(s):
+❌ Change spec validation failed with 1 error(s):
 
-  • Deploy stage "Deploy Staging" must specify an "environment"
+  • change.risk is required
 ```
 
-**Key talking point:**
-> "The validator catches the error immediately, before any CI job runs. This is fast feedback — the agentic system *perceives* the spec and *reasons* about its correctness."
+> "Immediate, local feedback — before any CI job runs."
 
 **Restore the spec:**
-```yaml
-  - name: Deploy Staging
-    type: deploy
-    environment: staging   # ← put it back
-    strategy: blue-green
-```
-
-Confirm it's valid again:
 ```bash
-npm run speckit:validate
+git checkout specs/change.spec.yaml
 ```
 
 ---
 
-### Step 2.4 — Add a new stage to the spec ⏱️ ~4 minutes (live edit)
+## Part 3 — Enforce Spec Presence in CI (15–25 min)
+
+### Step 3.1 — Overview of the spec-enforcer workflow ⏱️ ~2 minutes
 
 **What to say:**
-> "Now let's add a new stage. I want a performance-testing step. I'll add it right after the Test stage."
+> "Validation locally is useful. But we need the *pipeline* to enforce spec presence.
+> If a developer opens a PR without a change spec, the build should fail."
 
-Open `specs/app.spec.yaml` and add this block after the Test stage:
-
-```yaml
-  # ── Stage 3b: Performance Test ──────────────────────────────
-  - name: Performance Test
-    type: test
-    commands:
-      - echo "Running k6 load tests..."
-      - echo "All thresholds passed"
-```
-
-Validate:
-```bash
-npm run speckit:validate
-```
-
-**Expected output:**
-```
-✅ Spec is valid!
-   Stages:  Lint → Build → Test → Performance Test → Security Scan → Deploy Staging → Deploy Production → Notify
-```
-
-**Key talking point:**
-> "The new stage instantly appears in the pipeline order. I didn't touch any workflow YAML — I just added 5 lines to the spec."
-
-**Undo the change** (to keep the demo clean):
-```yaml
-# Remove the Performance Test stage you just added
-```
-
----
-
-## Part 3 — SpecKit Engine Deep Dive (25–40 min)
-
-### Step 3.1 — Run the full SpecKit loop ⏱️ ~30 seconds
-
-**What to say:**
-> "The `run` command validates, generates, and prints a full summary — the complete agentic loop in one shot."
-
-```bash
-npm run speckit:run
-```
-
-**Expected output (abridged):**
-```
-╔══════════════════════════════════════╗
-║         SpecKit — Agentic DevOps     ║
-╚══════════════════════════════════════╝
-
-📋 Processing spec: .../specs/app.spec.yaml
-
-✅ Step 1/3 — Parse:    spec loaded successfully
-✅ Step 2/3 — Validate: spec is valid
-✅ Step 3/3 — Generate: pipeline generated
-
-─── Pipeline Summary ──────────────────────────────
-  App Name:  ai-genius-speckit-demo
-  Runtime:   node 20
-  Stages:    7
-  ├─ [lint    ] Lint
-  ├─ [build   ] Build
-  ├─ [test    ] Test
-  ├─ [security] Security Scan
-  ├─ [deploy  ] Deploy Staging
-  ├─ [deploy  ] Deploy Production
-  └─ [notify  ] Notify
-```
-
-After the summary, the full generated GitHub Actions YAML is printed.
-
-> **Timing note:** The entire loop runs in ~0.06 seconds.
-
----
-
-### Step 3.2 — Walk through the pipeline generator ⏱️ ~5 minutes
-
-**What to say:**
-> "Let's look at the brain of SpecKit — the pipeline generator."
-
-Open `speckit/lib/pipeline-generator.js` in your editor.
+Open `.github/workflows/spec-enforcer.yml`.
 
 **Key sections to highlight:**
 
-1. **`RUNNER_MAP`** (line ~14) — maps runtime → GitHub Actions runner
-   ```javascript
-   const RUNNER_MAP = {
-     node: 'ubuntu-latest',
-     dotnet: 'windows-latest',
-     ...
-   };
-   ```
+**The spec presence check:**
+```yaml
+- name: Check spec file exists
+  run: |
+    if [ ! -f "${{ env.SPEC_FILE }}" ]; then
+      echo "❌ Change spec not found"
+      echo "Every PR must include specs/change.spec.yaml"
+      exit 1
+    fi
+```
+> "This is the first gate. The job fails immediately if the spec file is missing. No spec,
+> no merge."
 
-2. **`generateStageSteps()`** (line ~60) — the reasoning switch statement
-   ```javascript
-   switch (stage.type) {
-     case 'lint':    return generateLintSteps(stage, spec);
-     case 'test':    return generateTestSteps(stage, spec);
-     case 'deploy':  return generateDeploySteps(stage, spec);
-     ...
-   }
-   ```
-   > "This switch is where the agent *reasons* — it looks at the stage type and decides which steps to emit."
+**Validate, extract, comment:**
+```yaml
+- name: Validate change spec
+  run: |
+    node -e "
+      const { parseSpec } = require('./speckit/lib/parser');
+      const { validateChangeSpec } = require('./speckit/lib/spec-extractor');
+      ...
+    "
 
-3. **`generateTestSteps()`** (line ~125) — shows how options affect output
-   ```javascript
-   if (coverage) {
-     steps.push({ run: 'npm run test:coverage' });  // ← coverage: true
-   } else {
-     steps.push({ run: 'npm test' });
-   }
-   ```
-   > "The spec option `coverage: true` changes the generated command. The spec drives the behaviour."
-
-4. **`generateDeploySteps()`** (line ~203) — shows strategy-aware deployment
-   - `blue-green`, `canary`, `direct` strategies all use the same spec field
-   - Health check and rollback steps are conditionally added
-
-5. **`buildJobs()`** (line ~362) — sequential ordering
-   ```javascript
-   job.needs = [options.previousJobId];  // ← enforces Lint → Build → Test → ...
-   ```
+- name: Post PR comment
+  uses: actions/github-script@v7
+  with:
+    script: |
+      // Posts the spec summary as a PR comment
+```
+> "After validating, the workflow generates a spec summary and posts it as a PR comment.
+> Reviewers see risk level, breaking flag, and affected components without opening any files."
 
 ---
 
-### Step 3.3 — Generate the pipeline to a file ⏱️ ~1 minute
+### Step 3.2 — What reviewers see on the PR ⏱️ ~2 minutes
 
-**What to say:**
-> "Let's generate the pipeline and look at the output file."
+Show (or mock) a GitHub PR comment that the workflow would post:
 
-```bash
-npm run speckit:generate
-```
+```markdown
+### 📋 SpecKit Change Spec Summary
 
-**Expected output:**
-```
-⚙️  SpecKit › Generating pipeline from: .../specs/app.spec.yaml
+## Change Details
 
-✅ Workflow written to: .../github/workflows/generated-pipeline.yml
-   Stages: Lint → Build → Test → Security Scan → Deploy Staging → Deploy Production → Notify
-```
+| Field | Value |
+|---|---|
+| **Title** | Add user-facing health dashboard endpoint |
+| **Type** | `feature` |
+| **Risk** | 🟢 LOW |
+| **Breaking** | ✅ No |
 
-> **Timing note:** Generation takes ~0.16 seconds.
+> Low-risk change — isolated, additive, and fully tested.
 
-Now open `.github/workflows/generated-pipeline.yml` in your editor and scroll through it.
+## Affected Components
 
-**Point out:**
-- `on:` triggers — taken directly from the spec `pipeline.triggers`
-- Each stage → one job, named after the stage
-- `needs:` chains — enforces sequential execution
-- `if:` conditions — from the `condition:` field in the spec
-- `environment:` blocks on deploy jobs
-- The `always()` condition on the notify step
+| Component | Impact |
+|---|---|
+| `api-gateway` | ✏️ modified |
+| `health-service` | 🆕 new |
 
-**Key talking point:**
-> "120+ lines of GitHub Actions YAML, generated from a 90-line spec. And if I change the spec, I regenerate and get a new correct workflow — no manual edits needed."
+## Promotion Gate Results
 
----
-
-### Step 3.4 — Dry-run for stdout only ⏱️ ~30 seconds
-
-**What to say:**
-> "You can also preview the output without writing a file — useful in CI."
-
-```bash
-node speckit/index.js generate specs/app.spec.yaml --dry-run
-```
-
-The YAML prints to stdout. No file is written.
-
----
-
-### Step 3.5 — Walk through the validator ⏱️ ~2 minutes
-
-Open `speckit/lib/validator.js`.
-
-**Key points:**
-
-- Required fields: `name`, `runtime`, `stages`
-- Valid runtimes: `node | python | java | go | dotnet`
-- Valid stage types: `build | test | lint | security | deploy | notify`
-- Deploy stages must have `environment`
-
-**Key talking point:**
-> "The validator is the 'perceive' step in the agentic loop. It checks the spec is well-formed before the generator tries to act on it."
-
----
-
-## Part 4 — GitHub Actions Integration (40–55 min)
-
-### Step 4.1 — Overview of the three workflows ⏱️ ~2 minutes
-
-**What to say:**
-> "The repo ships with three GitHub Actions workflows. Let's look at each one."
-
-Navigate to `.github/workflows/` in your editor (or on GitHub).
-
-| Workflow | Trigger | Purpose |
+| Environment | Status | Notes |
 |---|---|---|
-| `ci.yml` | push / PR | Standard CI: lint → build → test |
-| `spec-driven-pipeline.yml` | push / PR / manual | ⭐ Agentic: reads the spec and conditionally runs jobs |
-| `generate-pipeline.yml` | spec file changed | Self-updating: regenerates the pipeline when spec changes |
+| staging    | 🟢 Clear | All gates passed |
+| production | 🟢 Clear | All gates passed |
+```
+
+> "The reviewer doesn't need to read the spec file — the pipeline extracts and formats
+> it for them. Intent is visible at the top of every PR."
 
 ---
 
-### Step 4.2 — Walk through `spec-driven-pipeline.yml` ⏱️ ~6 minutes
+### Step 3.3 — Walk through the spec-enforcer flow ⏱️ ~4 minutes
 
-Open `.github/workflows/spec-driven-pipeline.yml`.
+**Walk through these jobs in order:**
 
-**Key sections to highlight:**
+1. `Check spec file exists` — hard fail if missing
+2. `Validate change spec` — schema validation
+3. `Extract spec metadata` — outputs `risk_level`, `is_breaking`, `component_count`
+4. `Generate summary artifact` — calls `speckit extract --output /tmp/spec-summary.md`
+5. `Post PR comment` — uses `actions/github-script@v7` to upsert a comment
+6. `Upload spec summary artifact` — persists the summary for 30 days
 
-**The `spec-analysis` job:**
-```yaml
-spec-analysis:
-  runs-on: ubuntu-latest
-  outputs:
-    has_deploy: ${{ steps.analyze.outputs.has_deploy }}
-    has_security: ${{ steps.analyze.outputs.has_security }}
-  steps:
-    - name: Analyze spec
-      id: analyze
-      run: |
-        # Reads the YAML spec and sets outputs
-        ...
-```
-> "This job is the agent's perception step — it reads the spec and emits facts as job outputs."
+**Key talking point:**
+> "Notice we upload the spec summary as a GitHub Actions artifact. This creates an audit
+> trail — you can always look back at what the author declared for any past deployment."
 
-**Conditional downstream jobs:**
-```yaml
-security:
-  needs: [spec-analysis, test]
-  if: needs.spec-analysis.outputs.has_security == 'true'
-```
-> "The `if:` condition uses the output from `spec-analysis`. If the spec has no security stage, this job is skipped entirely. The pipeline *adapts* to the spec."
+---
 
-**`workflow_dispatch` with spec input:**
-```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      spec_file:
-        description: 'Path to spec file'
-        default: 'specs/app.spec.yaml'
-```
-> "You can trigger this workflow manually and pass a different spec file — useful for testing new specs before merging."
+### Step 3.4 — Trigger manually ⏱️ ~1 minute
 
-**How to trigger manually on GitHub:**
-1. Go to **Actions** tab in the repo
-2. Select **"SpecKit Spec-Driven Pipeline"**
+**How to trigger on GitHub:**
+1. Go to **Actions** tab
+2. Select **"Spec Enforcer — Require Change Spec on PRs"**
 3. Click **"Run workflow"**
 4. Optionally change the spec file path
 5. Click **"Run workflow"**
 
 ---
 
-### Step 4.3 — Walk through `generate-pipeline.yml` ⏱️ ~4 minutes
+## Part 4 — Extract Metadata and Generate a Summary (25–40 min)
 
-Open `.github/workflows/generate-pipeline.yml`.
+### Step 4.1 — Walk through `spec-extractor.js` ⏱️ ~6 minutes
 
-**Key sections to highlight:**
+**What to say:**
+> "Let's look at the library module that does all the extraction. This is the brain
+> behind both the spec-enforcer and the spec-gate workflows."
 
-**Trigger on spec changes:**
-```yaml
-on:
-  push:
-    paths:
-      - 'specs/**.yaml'
-      - 'specs/**.yml'
+Open `speckit/lib/spec-extractor.js`.
+
+**Key functions to highlight:**
+
+**`validateChangeSpec(spec)`** (line ~26):
+```javascript
+function validateChangeSpec(spec) {
+  const errors = [];
+  if (!spec.change) { errors.push('...'); return { valid: false, errors }; }
+  // validates title, type, risk, breaking, components, promotion
+}
 ```
-> "This workflow only runs when a spec file changes. It's not triggered by code changes."
+> "Separate from the app spec validator — change specs have different required fields."
 
-**Regenerate and open a PR:**
-```yaml
-- name: Generate pipeline
-  run: npm run speckit:generate
-
-- name: Create Pull Request
-  uses: peter-evans/create-pull-request@v6
-  with:
-    title: "chore: regenerate pipeline from spec"
-    body: "Automated update: spec changed → pipeline regenerated by SpecKit"
+**`extractRisk(spec)`** (line ~95):
+```javascript
+function extractRisk(spec) {
+  const risk = c.risk || 'unknown';
+  const breaking = c.breaking === true;
+  // Generates a rationale string based on risk + breaking
+  return { risk, breaking, type, rationale };
+}
 ```
-> "This closes the agentic loop: change the spec → GitHub Actions runs → SpecKit regenerates the pipeline → a PR is opened with the new workflow. Zero manual steps."
+> "The rationale is what goes into the PR comment. It translates the spec field into
+> a human-readable explanation."
+
+**`evaluatePromotionGate(spec, environment)`** (line ~138):
+```javascript
+function evaluatePromotionGate(spec, environment) {
+  if (environment === 'production') {
+    if (breaking)   reasons.push('Breaking changes require manual approval...');
+    if (risk === 'high') reasons.push('High-risk changes require additional review...');
+  }
+  return { blocked: reasons.length > 0, reasons };
+}
+```
+> "This is the gate logic. It returns `{ blocked: true, reasons: [...] }`. The workflow
+> reads this and decides whether to proceed."
+
+**`generateSummary(spec)`** (line ~165):
+> "Generates the full Markdown summary — the same text posted as a PR comment and
+> uploaded as an artifact."
 
 ---
 
-### Step 4.4 — Run the sample API ⏱️ ~2 minutes
-
-**What to say:**
-> "The repo also includes a real Express.js app that the pipeline is meant to build and deploy. Let's start it."
+### Step 4.2 — Run the extract command with gate evaluation ⏱️ ~2 minutes
 
 ```bash
-npm start
+# Check the staging gate
+node speckit/index.js extract specs/change.spec.yaml --env staging
+
+# Check the production gate
+node speckit/index.js extract specs/change.spec.yaml --env production
+```
+
+**Expected output (production):**
+```
+🟢 CLEAR — all promotion gates passed
+```
+
+Now temporarily change `risk: high` in `specs/change.spec.yaml`:
+
+```bash
+node speckit/index.js extract specs/change.spec.yaml --env production
 ```
 
 **Expected output:**
 ```
-🚀 Server running on http://localhost:3000
-📋 SpecKit Demo API ready
+🔴 BLOCKED — 1 reason(s):
+   • High-risk changes require additional review before production deployment
 ```
 
-In a second terminal (or browser), test the endpoints:
+Exit code is `2` (non-zero) — GitHub Actions can use this to block the job.
 
+**Restore:**
 ```bash
-# Root endpoint
-curl http://localhost:3000/
-# Returns: {"name":"AI Genius SpecKit Demo","version":"1.0.0",...}
-
-# Health check
-curl http://localhost:3000/health
-# Returns: {"status":"healthy","uptime":...}
-
-# API status
-curl http://localhost:3000/api/status
-# Returns: {"status":"running","environment":"development",...}
+git checkout specs/change.spec.yaml
 ```
-
-Stop the server with `Ctrl+C`.
-
-> **Timing note:** Server starts in under 1 second.
 
 ---
 
-### Step 4.5 — Run tests with coverage ⏱️ ~2 minutes
+### Step 4.3 — Generate and inspect the summary artifact ⏱️ ~3 minutes
 
-**What to say:**
-> "The pipeline spec sets `coverageThreshold: 80`. Let's run the coverage report to see how the project stands."
+```bash
+node speckit/index.js extract specs/change.spec.yaml --output /tmp/spec-summary.md
+cat /tmp/spec-summary.md
+```
+
+**Point out:**
+- The full Markdown table with all fields
+- The Promotion Gate Results section with 🟢/🔴 status for each environment
+- The References section linking to closed issues
+
+> "This artifact is what you archive for compliance. It answers: for this release,
+> who declared what risk level, which components were affected, and were all gates clear?"
+
+---
+
+### Step 4.4 — Run the full test suite to see extractor coverage ⏱️ ~1 minute
 
 ```bash
 npm run test:coverage
 ```
 
-**Expected output (summary):**
-```
------------------------|---------|----------|---------|---------|
-File                   | % Stmts | % Branch | % Funcs | % Lines |
------------------------|---------|----------|---------|---------|
-All files              |   87.67 |    70.96 |      80 |   89.32 |
- speckit/lib           |   88.70 |    71.42 |   82.75 |   90.60 |
-  parser.js            |     100 |      100 |     100 |     100 |
-  pipeline-generator.js|   86.61 |    69.02 |   77.27 |   89.13 |
-  validator.js         |   93.10 |       75 |     100 |   92.85 |
- src                   |      75 |     62.50 |      60 |      75 |
-  app.js               |      75 |     62.50 |      60 |      75 |
- src/routes            |     100 |      100 |     100 |     100 |
-  health.js            |     100 |      100 |     100 |     100 |
------------------------|---------|----------|---------|---------|
-Tests: 32 passed, 32 total
-Time:  ~1.3s
-```
+Point out the `speckit/lib/spec-extractor.js` row in the coverage table.
 
-> **Timing note:** Full coverage run takes ~1.3 seconds.
+> "We went from 32 to 57 tests. The 25 new tests cover the extractor: schema validation,
+> risk extraction, gate evaluation, and summary generation."
 
 ---
 
-## Part 5 — Live Demo: Change Spec → Pipeline Adapts (55–60 min)
+## Part 5 — Apply Promotion Rules (40–55 min)
 
-### Step 5.1 — Remove a stage and regenerate ⏱️ ~2 minutes
+### Step 5.1 — Overview of the spec-gate workflow ⏱️ ~3 minutes
 
 **What to say:**
-> "The last demo — the full agentic loop live. I'll change the spec and watch the pipeline update."
+> "The spec-enforcer runs on PRs and posts a comment. The spec-gate workflow runs on
+> push and controls deployment. It reads the spec and gates the deploy jobs."
 
-Open `specs/app.spec.yaml`. Comment out the entire **Security Scan** stage:
+Open `.github/workflows/spec-gate.yml`.
 
+**Key structure:**
 ```yaml
-  # ── Stage 4: Security Scan ─────────────────────────────────
-  # - name: Security Scan
-  #   type: security
-  #   scanDependencies: true
-  #   scanSecrets: true
-  #   codeql: true
+jobs:
+  spec-gate:     # reads spec, evaluates gates, sets outputs
+  ci:            # runs lint + test (always)
+  deploy-staging:
+    needs: [spec-gate, ci]
+    if: needs.spec-gate.outputs.staging_blocked != 'true'
+  deploy-production:
+    needs: [spec-gate, deploy-staging]
+    if: needs.spec-gate.outputs.production_blocked != 'true'
 ```
-
-Validate and regenerate:
-
-```bash
-npm run speckit:validate
-npm run speckit:generate
-```
-
-**Expected validate output:**
-```
-✅ Spec is valid!
-   Stages:  Lint → Build → Test → Deploy Staging → Deploy Production → Notify
-```
-
-Notice **Security Scan is gone**. Open `.github/workflows/generated-pipeline.yml` — there is no `security-scan` job. The `deploy-staging` job now `needs: [test]` directly.
-
-**Key talking point:**
-> "One comment in the spec, zero manual changes to the workflow. The pipeline adapted automatically."
+> "The gate job runs first and sets `staging_blocked` and `production_blocked` outputs.
+> Downstream jobs read those outputs via `if:` conditions. If the spec says 'blocked',
+> the deploy job is skipped entirely."
 
 ---
 
-### Step 5.2 — Swap deployment strategy ⏱️ ~2 minutes
+### Step 5.2 — Walk through the gate job steps ⏱️ ~5 minutes
 
-**What to say:**
-> "Now let's change the deployment strategy from `blue-green` to `canary` for staging."
-
-In `specs/app.spec.yaml`, change:
-
+**The check-exists step:**
 ```yaml
-  - name: Deploy Staging
-    type: deploy
-    environment: staging
-    strategy: canary    # ← was blue-green
-```
-
-Regenerate:
-
-```bash
-npm run speckit:generate
-```
-
-Open `.github/workflows/generated-pipeline.yml` and find the `deploy-staging` job. The deploy step now says:
-
-```yaml
-- name: Deploy to staging
+- name: Check spec file exists
   run: |
-    echo "🚀 Deploying ai-genius-speckit-demo to staging"
-    echo "📦 Strategy: canary"
+    if [ ! -f "${{ env.SPEC_FILE }}" ]; then
+      echo "⚠️  No change spec found — using safe defaults"
+    fi
 ```
+> "The gate is lenient on push if no spec exists — it uses safe defaults (low risk, not
+> breaking). The *enforcer* on the PR is strict. This two-workflow pattern lets you
+> adopt controls incrementally."
 
-**Key talking point:**
-> "One word changed in the spec. The pipeline now uses canary deployment. No YAML knowledge required from the developer."
+**The extract step:**
+```yaml
+- name: Extract spec metadata
+  id: extract
+  run: |
+    node -e "
+      const { extractRisk, extractPromotionRules } = require('./speckit/lib/spec-extractor');
+      const { risk, breaking, type } = extractRisk(spec);
+      console.log('risk_level=' + risk);
+      console.log('is_breaking=' + breaking);
+      ..." | tee -a "$GITHUB_OUTPUT"
+```
+> "Job outputs in GitHub Actions are key=value pairs written to `$GITHUB_OUTPUT`.
+> Downstream jobs read them with `needs.spec-gate.outputs.risk_level`."
+
+**The gate evaluation step:**
+```yaml
+- name: Evaluate promotion gates
+  id: gate
+  run: |
+    node -e "
+      const staging = evaluatePromotionGate(spec, 'staging');
+      const production = evaluatePromotionGate(spec, 'production');
+      console.log('staging_blocked=' + staging.blocked);
+      console.log('production_blocked=' + production.blocked);
+    " | tee -a "$GITHUB_OUTPUT"
+```
+> "One Node.js call, two outputs. These are the levers that downstream deploy jobs check."
 
 ---
 
-### Step 5.3 — Push and watch the GitHub Actions loop (live) ⏱️ ~2 minutes
+### Step 5.3 — Demo: breaking change blocks production ⏱️ ~5 minutes
 
 **What to say:**
-> "In a real setup, pushing this spec change would trigger `generate-pipeline.yml`, which runs SpecKit and opens a PR with the new workflow. Let me show you."
+> "Let's see the gate in action. I'll change `breaking: true` in the change spec
+> and watch the production deploy job get blocked."
 
+Edit `specs/change.spec.yaml`:
+```yaml
+  breaking: true   # ← was false
+```
+
+Check the production gate locally:
 ```bash
-git add specs/app.spec.yaml
-git commit -m "chore: update spec — canary staging, no security scan"
+node speckit/index.js extract specs/change.spec.yaml --env production
+```
+
+**Expected output:**
+```
+🔴 BLOCKED — 1 reason(s):
+   • Breaking changes require manual approval before production deployment
+```
+
+Then commit and push to trigger the workflow on GitHub:
+```bash
+git add specs/change.spec.yaml
+git commit -m "demo: mark change as breaking to show gate"
 git push
 ```
 
 On GitHub:
-1. Go to the **Actions** tab
-2. Watch **"Generate Pipeline from Spec"** workflow run (triggered by the spec file change)
-3. After it completes, go to **Pull Requests** — a new PR will be open with the regenerated workflow
+1. Go to **Actions** tab
+2. Watch **"Spec Gate — Apply Promotion Rules"** run
+3. Click into the run — you will see:
+   - `spec-gate` job: `production_blocked=true`
+   - `deploy-staging` job: ✅ runs normally
+   - `deploy-production` job: ⏭️ skipped (condition was false)
+4. Click the gate summary artifact — the Markdown summary shows `🔴 Blocked` for production
 
 **Key talking point:**
-> "This is the agentic loop closing: the spec changed, the agent perceived it, reasoned over it, and acted — opening a PR with a new pipeline. No human wrote any workflow YAML."
+> "The developer declared `breaking: true`. The pipeline enforced the consequence —
+> production was skipped. No YAML knowledge required. No manual reviewer needed to
+> catch it. The spec did the work."
+
+**Restore:**
+```bash
+git checkout specs/change.spec.yaml
+git push
+```
 
 ---
 
-### Step 5.4 — Restore to original state ⏱️ ~1 minute
+### Step 5.4 — Demo: high risk blocks production ⏱️ ~3 minutes
 
-After the demo, restore the spec to its original state:
+Edit `specs/change.spec.yaml`:
+```yaml
+  risk: high   # ← was low
+  breaking: false
+```
 
 ```bash
-git checkout specs/app.spec.yaml
-npm run speckit:validate
-npm run speckit:generate
+node speckit/index.js extract specs/change.spec.yaml --env production
 ```
 
-Confirm:
+**Expected:**
 ```
-✅ Spec is valid!
-   Stages:  Lint → Build → Test → Security Scan → Deploy Staging → Deploy Production → Notify
+🔴 BLOCKED — 1 reason(s):
+   • High-risk changes require additional review before production deployment
 ```
+
+> "Two independent controls: `breaking` and `risk`. Both can gate production.
+> Both are declared by the author. Both are enforced by the pipeline."
+
+**Restore:**
+```bash
+git checkout specs/change.spec.yaml
+```
+
+---
+
+### Step 5.5 — Show the gate summary artifact ⏱️ ~2 minutes
+
+After the workflow runs, go to the GitHub Actions run page:
+1. Click into the `spec-gate` job
+2. Click **Artifacts** in the top-right
+3. Download **spec-gate-summary**
+4. Open the Markdown file
+
+Show the Promotion Gate Results table with both environments.
+
+**Key talking point:**
+> "Every deployment now has an attached spec summary. Audit trail, risk declaration,
+> and gate results — all in one artifact, stored for 30 days."
+
+---
+
+## Part 6 — Live Demo: The Full Loop (55–60 min)
+
+### Step 6.1 — Open a PR without a spec ⏱️ ~2 minutes
+
+**What to say:**
+> "Let's prove the enforcer catches missing specs. I'll create a branch, make a small
+> code change, open a PR, and intentionally leave out the change spec."
+
+```bash
+git checkout -b demo/no-spec
+# Make a trivial code change
+echo "// demo" >> src/app.js
+git add src/app.js
+git commit -m "demo: code change without spec"
+git push -u origin demo/no-spec
+```
+
+Open a PR from `demo/no-spec` → `main` on GitHub.
+
+Watch **"Spec Enforcer"** fail:
+```
+❌ Change spec not found: specs/change.spec.yaml
+   Every pull request must include a change spec...
+```
+
+> "The merge is blocked. No spec, no merge. The pipeline validates intent."
+
+**Cleanup:**
+```bash
+git checkout main
+git branch -D demo/no-spec
+git push origin --delete demo/no-spec
+```
+
+---
+
+### Step 6.2 — Open a PR with a complete spec ⏱️ ~2 minutes
+
+```bash
+git checkout -b demo/with-spec
+echo "// demo" >> src/app.js
+# Change spec is already in place — leave it as-is
+git add .
+git commit -m "demo: code change with spec"
+git push -u origin demo/with-spec
+```
+
+Open a PR from `demo/with-spec` → `main`.
+
+Watch **"Spec Enforcer"** pass and post the PR comment with:
+- Risk level and breaking status
+- Affected components
+- Promotion gate results
+
+**Key talking point:**
+> "The reviewer immediately sees: low risk, no breaking change, both gates clear.
+> They can make an informed decision without reading the code."
+
+**Cleanup:**
+```bash
+git checkout main
+git branch -D demo/with-spec
+git push origin --delete demo/with-spec
+```
+
+---
+
+### Step 6.3 — Closing message ⏱️ ~1 minute
+
+**What to say:**
+> "Let's recap what we built in 60 minutes:
+>
+> 1. A **change spec** — a small, structured YAML artifact committed with every PR.
+> 2. A **spec-enforcer** workflow — blocks PRs without a spec, posts a summary comment.
+> 3. A **spec-extractor** module — extracts risk, breaking-change, and promotion rules.
+> 4. A **spec-gate** workflow — evaluates promotion gates and blocks deploys when needed.
+>
+> The pipeline now validates *intent*, not just code. Merges and releases are gated by
+> clear, reviewable requirements. Not tribal knowledge."
 
 ---
 
@@ -677,16 +713,16 @@ Confirm:
 | Command | What it does | Typical time |
 |---------|-------------|-------------|
 | `npm install` | Install all dependencies | ~3–15 s |
-| `npm test` | Run all 32 Jest tests | ~1.3 s |
-| `npm run test:coverage` | Tests + coverage report | ~1.3 s |
+| `npm test` | Run all 57 Jest tests | ~0.9 s |
+| `npm run test:coverage` | Tests + coverage report | ~1 s |
 | `npm run lint` | ESLint check | ~0.4 s |
 | `npm run speckit:validate` | Validate `specs/app.spec.yaml` | ~0.15 s |
-| `npm run speckit:generate` | Generate pipeline YAML to `.github/workflows/generated-pipeline.yml` | ~0.16 s |
-| `npm run speckit:run` | Full agentic loop: parse → validate → generate + summary | ~0.06 s |
+| `npm run speckit:extract` | Extract metadata from `specs/change.spec.yaml` | ~0.1 s |
+| `npm run speckit:generate` | Generate pipeline YAML | ~0.16 s |
+| `npm run speckit:run` | Full agentic loop: parse → validate → generate | ~0.06 s |
 | `npm start` | Start Express.js API on port 3000 | < 1 s |
-| `node speckit/index.js validate specs/app.spec.yaml` | Same as speckit:validate | ~0.15 s |
-| `node speckit/index.js generate specs/app.spec.yaml --dry-run` | Preview pipeline to stdout | ~0.16 s |
-| `node speckit/index.js run specs/app.spec.yaml` | Full run with pipeline printed | ~0.06 s |
+| `node speckit/index.js extract specs/change.spec.yaml --env production` | Evaluate production gate | ~0.1 s |
+| `node speckit/index.js extract specs/change.spec.yaml -o /tmp/summary.md` | Generate summary to file | ~0.1 s |
 
 ---
 
@@ -694,12 +730,12 @@ Confirm:
 
 | Problem | Fix |
 |---------|-----|
-| `npm install` fails | Check Node.js version: `node --version` must be ≥ 18 |
-| Tests fail | Run `npm install` first; check for syntax errors in any spec edits |
-| Validation fails after spec edit | Read the error message — it tells you exactly which field is wrong |
-| Port 3000 already in use | `PORT=3001 npm start` |
-| Generate overwrites existing workflow | Intended — the file is always regenerated from the spec |
-| GitHub Actions workflow not triggered | Check the file paths in the `on.push.paths` filter |
+| `npm install` fails | Check `node --version` must be ≥ 18 |
+| Tests fail | Run `npm install` first |
+| Spec validation fails | Read the error — it names the exact field |
+| Port 3000 in use | `PORT=3001 npm start` |
+| Gate shows blocked unexpectedly | Run `npm run speckit:extract` locally to see the reason |
+| PR comment not posted | Check `GITHUB_TOKEN` permissions (`pull-requests: write`) |
 
 ---
 
@@ -709,66 +745,63 @@ Confirm:
 Usage: node speckit/index.js <command> <spec-file> [options]
 
 Commands:
-  validate <spec>              Validate a spec file
+  validate <spec>              Validate an app spec file
   generate <spec> [options]    Generate GitHub Actions workflow
     -o, --output <file>          Write to file (default: stdout)
     --dry-run                    Print to stdout without writing
   run <spec>                   Validate + generate + print full summary
+  extract <spec> [options]     Extract metadata from a change spec
+    -o, --output <file>          Write Markdown summary to file
+    --env <environment>          Evaluate promotion gate for environment
 
 Examples:
   node speckit/index.js validate specs/app.spec.yaml
+  node speckit/index.js extract specs/change.spec.yaml
+  node speckit/index.js extract specs/change.spec.yaml --env production
+  node speckit/index.js extract specs/change.spec.yaml -o /tmp/summary.md
   node speckit/index.js generate specs/app.spec.yaml --dry-run
-  node speckit/index.js generate specs/app.spec.yaml -o .github/workflows/my-pipeline.yml
   node speckit/index.js run specs/app.spec.yaml
 ```
 
 ---
 
-## Spec File Reference
+## Change Spec Reference
 
 ```yaml
 # ── Required ──────────────────────────────────────────────────
-name: string                # App name
-runtime: node|python|java|go|dotnet
-stages:                     # At least one required
-  - name: string            # Required — becomes the job ID
-    type: lint|build|test|security|deploy|notify  # Required
+change:
+  title: string                 # Change title
+  type: feature|fix|chore|breaking|release
+  risk: low|medium|high
+  breaking: true|false
 
-# ── Optional top-level ────────────────────────────────────────
-description: string
-version: string
-runtimeVersion: string      # e.g. "20", "3.11", "21"
+# ── Optional ──────────────────────────────────────────────────
+  description: string
 
-pipeline:
-  name: string              # Workflow display name
-  triggers:                 # GitHub Actions 'on:' block
-    push:
-      branches: [main]
-    pull_request:
-      branches: [main]
-    workflow_dispatch:
+  components:
+    - name: string              # Required per component
+      impact: new|modified|removed
 
-# ── Stage options (by type) ───────────────────────────────────
-# test:
-    coverage: true|false
-    coverageThreshold: 80
+  promotion:
+    require_approvals: 1
+    require_passing_tests: true
+    require_security_scan: false
+    environments:
+      - staging
+      - production
 
-# security:
-    scanDependencies: true|false
-    scanSecrets: true|false
-    codeql: true|false
-
-# deploy:
-    environment: staging|production  # REQUIRED
-    strategy: blue-green|canary|direct
-    healthCheck: true|false
-    rollback: true|false
-
-# notify:
-    channel: slack|teams|email
-
-# any stage:
-    commands: []            # Custom commands (overrides defaults)
-    condition: string       # GitHub Actions if: expression
-    needs: []               # Override sequential ordering
+  refs:
+    - "closes #42"
 ```
+
+---
+
+## Promotion Gate Rules
+
+| Spec field | Staging | Production |
+|---|---|---|
+| `risk: low`, `breaking: false` | 🟢 Clear | 🟢 Clear |
+| `risk: medium`, `breaking: false` | 🟢 Clear | 🟢 Clear |
+| `risk: high`, `breaking: false` | 🟢 Clear | 🔴 Blocked |
+| `risk: any`, `breaking: true` | 🟢 Clear | 🔴 Blocked |
+| environment not in `promotion.environments` | 🔴 Blocked | 🔴 Blocked |

@@ -1,0 +1,57 @@
+# ============================================================
+# SpecKit Change Specification
+#
+# This file is a first-class DevOps artifact committed with
+# every pull request. GitHub Actions reads it to:
+#
+#   1. Enforce spec presence    — fail the PR if this file is missing
+#   2. Extract risk metadata    — surface risk level and breaking changes
+#   3. Generate a summary       — produce a human-readable artifact
+#   4. Apply promotion rules    — gate staging and production deployments
+#
+# 🎯 Demo tip: change risk to "high" or set breaking: true and
+#     watch the spec-gate workflow apply different controls.
+# ============================================================
+
+change:
+  # ── What is this change? ──────────────────────────────────
+  title: "Add user-facing health dashboard endpoint"
+  type: feature          # feature | fix | chore | breaking | release
+  description: >
+    Adds a new /api/dashboard route that aggregates health
+    and status information for authenticated users.
+    This is a purely additive change; no existing endpoints
+    are modified and no database schema changes are required.
+
+  # ── Risk assessment ───────────────────────────────────────
+  # low    — isolated change, no shared state, fully tested
+  # medium — touches shared logic or affects multiple consumers
+  # high   — cross-cutting, data-model change, or untested path
+  risk: low
+
+  # ── Breaking change flag ──────────────────────────────────
+  # Set true if this change removes or alters existing
+  # API contracts, configuration keys, or data formats.
+  breaking: false
+
+  # ── Affected components ───────────────────────────────────
+  components:
+    - name: api-gateway
+      impact: modified
+    - name: health-service
+      impact: new
+
+  # ── Promotion rules ───────────────────────────────────────
+  # The spec-gate workflow enforces these rules before allowing
+  # deployment to proceed to each environment.
+  promotion:
+    require_approvals: 1
+    require_passing_tests: true
+    require_security_scan: false
+    environments:
+      - staging
+      - production
+
+  # ── Linked references ─────────────────────────────────────
+  refs:
+    - "closes #12"
