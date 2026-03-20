@@ -20,7 +20,7 @@
 | [Part 2 — Existing Infrastructure Pipelines](#part-2--existing-infrastructure-pipelines) | Bicep CI/CD for Azure Infrastructure |
 | [Part 3 — Frontend App](#part-3--frontend-app) | Spec-Driven Frontend Deployment (Specify → Implement → Deploy) |
 | [Part 4 — API App](#part-4--api-app) | Backend API Deployment via GitHub Actions |
-| [Part 5 — Add Gates](#part-5--add-gates) | Quality Gates & Deployment Approvals |
+| [Part 5 — Add Gates](#part-5--add-gates) | Quality Gates & Deployment Approvals (Speed Spec) |
 
 ---
 
@@ -221,7 +221,7 @@ Verify in the **Actions** tab that the infrastructure workflow completes success
 
 ## Part 3 — Frontend App
 
-### Step 3 — Create the Spec
+### 3.1 — Create the Spec
 
 **In GitHub Copilot Chat**, use `/speckit.specify` to describe what you want to build.
 Focus on the **what** and **why** — not the tech stack.
@@ -255,7 +255,7 @@ cat specs/001-frontend-deploy/spec.md
 
 ---
 
-### Step 4 — Clarify the Spec
+### 3.2 — Clarify the Spec
 
 **In GitHub Copilot Chat**, use `/speckit.clarify` to resolve any ambiguities.
 Run it once with a general focus, then again with specific concerns.
@@ -287,7 +287,7 @@ Review `specs/001-frontend-deploy/spec.md` after each clarify pass to confirm th
 
 ---
 
-### Step 5 — Validate the Spec
+### 3.3 — Validate the Spec
 
 **In GitHub Copilot Chat**, use `/speckit.checklist` to run a quality check on
 the specification before moving to implementation planning. This acts like a
@@ -309,7 +309,7 @@ Address any failing checklist items before continuing.
 
 ---
 
-### Step 6 — Create a Technical Implementation Plan
+### 3.4 — Create a Technical Implementation Plan
 
 **In GitHub Copilot Chat**, use `/speckit.plan` to provide the tech stack and
 architecture choices. Spec-Kit translates the business requirements into a
@@ -343,7 +343,7 @@ Spec-Kit generates into `specs/001-frontend-deploy/`:
 
 ---
 
-### Step 7 — Generate Tasks
+### 3.5 — Generate Tasks
 
 **In GitHub Copilot Chat**, use `/speckit.tasks` to generate an actionable task
 list from the implementation plan. Tasks are derived from the contracts, data
@@ -364,7 +364,7 @@ Review `specs/001-frontend-deploy/tasks.md` and adjust priorities if needed.
 
 ---
 
-### Step 8 — Analyze and Validate
+### 3.6 — Analyze and Validate
 
 **In GitHub Copilot Chat**, use `/speckit.analyze` to run a cross-artifact
 consistency check. This catches mismatches between the spec, plan, contracts,
@@ -385,7 +385,7 @@ Address any inconsistencies reported before proceeding.
 
 ---
 
-### Step 9 — Implement
+### 3.7 — Implement
 
 **In GitHub Copilot Chat**, use `/speckit.implement` to execute the task list and
 build the frontend deployment workflow.
@@ -413,12 +413,12 @@ git commit -m "feat: add frontend deployment workflow"
 
 ---
 
-### Step 10 — Run the Frontend Deployment End-to-End
+### 3.8 — Run the Frontend Deployment End-to-End
 
 With the frontend deployment workflow implemented, push to GitHub and run the
 pipeline end-to-end to confirm everything works.
 
-### 10.1 — Configure GitHub Secrets
+#### Configure GitHub Secrets
 
 Before the workflow can authenticate to Azure, set up the required secrets in your
 GitHub repository under **Settings → Secrets and variables → Actions**:
@@ -434,7 +434,7 @@ GitHub repository under **Settings → Secrets and variables → Actions**:
 > **Tip:** If you haven't created an Azure OIDC federated credential yet, follow the
 > Azure AD setup in [Part 2](#part-2--existing-infrastructure-pipelines).
 
-### 10.2 — Push and Trigger the Workflow
+#### Push and Trigger the Workflow
 
 ```bash
 git push origin main
@@ -443,7 +443,7 @@ git push origin main
 The `deploy-web.yml` workflow triggers automatically. Monitor progress in the
 **Actions** tab of your GitHub repository.
 
-### 10.3 — Verify Success
+#### Verify Success
 
 1. Open the **Actions** tab and confirm the workflow run shows a green ✅ check.
 2. Click into the run to inspect each step: checkout, setup node, install, build, deploy.
@@ -536,77 +536,69 @@ Expected:
 
 ## Part 5 — Add Gates
 
-Quality gates ensure that code changes pass through validation checkpoints before
-reaching production. Add gates to the CI/CD pipeline to enforce code quality,
-security, and deployment approvals.
+Use the Spec-Kit **speed workflow** to add quality gates and deployment approvals
+to the CI/CD pipeline. Gates enforce code quality, security checks, and manual
+approvals before changes reach production.
 
-### 5.1 — Environment Protection Rules
+### 5.1 — Create the Gates Spec
 
-Configure environment protection rules in GitHub to require manual approvals
-before deploying to production.
-
-In your GitHub repository, go to **Settings → Environments** and create environments:
-
-| Environment | Protection Rules |
-|-------------|------------------|
-| `development` | None (auto-deploy) |
-| `staging` | Required reviewers (1 approver) |
-| `production` | Required reviewers (2 approvers) + wait timer (5 min) |
-
-### 5.2 — Add Branch Protection
-
-Configure branch protection rules under **Settings → Branches → main**:
-
-- ✅ Require a pull request before merging
-- ✅ Require status checks to pass (CI build + tests)
-- ✅ Require review from code owners
-- ✅ Do not allow bypassing the above settings
-
-### 5.3 — Add CI Quality Checks
-
-Create or update `.github/workflows/ci.yml` to run on every pull request:
-
-```yaml
-name: CI
-
-on:
-  pull_request:
-    branches: [main]
-
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Frontend
-        run: |
-          cd src/ai-genius-web
-          npm ci
-          npm run build
-
-      - name: Build API
-        run: |
-          cd src/ai-genius-api
-          dotnet build
-          dotnet test
+```
+/speckit.specify Add quality gates and deployment approvals to the AI Genius CI/CD pipeline.
+Update the GitHub Actions workflows to include:
+1. A CI workflow (.github/workflows/ci.yml) that runs on every pull request
+   to main — builds the frontend and API, runs tests.
+2. Branch protection on main: require PR, require passing CI checks,
+   require code review before merge.
+3. GitHub environment protection rules:
+   - development: auto-deploy (no gates)
+   - staging: 1 required reviewer
+   - production: 2 required reviewers + 5-minute wait timer
+4. Update deploy-web.yml and deploy-api.yml to reference the production
+   environment so deployment pauses for approval.
+All gates must be enforced — no bypassing allowed.
 ```
 
-### 5.4 — Update Deployment Workflows with Environments
+### 5.2 — Speed-Run: Clarify, Plan, Tasks
 
-Add environment references to your deployment workflows so GitHub enforces
-the protection rules:
+Run each command in quick succession without pausing:
 
-```yaml
-# In deploy-web.yml and deploy-api.yml, add:
-jobs:
-  deploy:
-    environment: production    # Triggers approval gate
-    runs-on: ubuntu-latest
-    # ... rest of the job
+```
+/speckit.clarify The CI workflow builds the frontend (npm ci && npm run build
+in src/ai-genius-web) and the API (dotnet build && dotnet test in
+src/ai-genius-api). Branch protection and environment rules are configured
+in GitHub Settings, not in workflow files. The deployment workflows add
+an environment: production key to trigger the approval gate.
 ```
 
-### 5.5 — Verify Gates
+```
+/speckit.plan
+CI workflow: .github/workflows/ci.yml
+Trigger: pull_request to main
+Steps: checkout → build frontend → build & test API
+Environments: development (no gate), staging (1 reviewer), production (2 reviewers + wait)
+Deploy workflows: add environment: production to deploy jobs.
+Branch protection: require PR, require status checks, require review.
+```
+
+```
+/speckit.tasks
+```
+
+### 5.3 — Implement and Verify
+
+```
+/speckit.implement
+```
+
+After implementation, push and verify:
+
+```bash
+git add .
+git commit -m "feat: add quality gates and deployment approvals"
+git push origin main
+```
+
+Verify the gates are working:
 
 1. Create a pull request targeting `main`.
 2. Confirm the CI workflow runs and must pass before merge.
