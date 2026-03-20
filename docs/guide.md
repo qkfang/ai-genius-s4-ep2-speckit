@@ -649,13 +649,18 @@ ai-genius-s4-ep2-speckit/
 │   │   ├── spec.md
 │   │   ├── plan.md
 │   │   └── tasks.md
-│   └── 003-api-deploy/             # Spec: backend API deployment via GitHub Actions
+│   ├── 003-api-deploy/             # Spec: backend API deployment via GitHub Actions
+│   │   ├── spec.md
+│   │   ├── plan.md
+│   │   └── tasks.md
+│   └── 004-quality-gates/          # Spec: quality gates & deployment approvals
 │       ├── spec.md
 │       ├── plan.md
 │       └── tasks.md
 │
 └── .github/
     └── workflows/
+        ├── ci.yml                  # Build & test on every PR
         ├── deploy-web.yml          # Deploy frontend to Azure Static Web Apps
         ├── deploy-api.yml          # Deploy API to Azure App Service
         └── deploy-infra.yml        # Provision Bicep infrastructure
