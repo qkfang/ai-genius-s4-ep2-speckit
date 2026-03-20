@@ -1,0 +1,45 @@
+name: Spec Check — Presence
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write   # to post a comment explaining the failure
+
+jobs:
+  spec-presence:
+    name: Verify spec artifact exists
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Derive feature ID from branch name
+        id: branch
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          # Extract leading NNN- segment, e.g. "002-speckit-cicd" → "002"
+          FEATURE_ID=$(echo "$BRANCH" | grep -oP '^\d+' || true)
+          echo "feature_id=${FEATURE_ID}" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for spec file
+        id: spec
+        run: |
+          FEATURE_ID="${{ steps.branch.outputs.feature_id }}"
+          if [ -z "$FEATURE_ID" ]; then
+            echo "Branch does not follow NNN-<name> convention — skipping spec check."
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SPEC_FILE=$(find specs -name "spec.md" -path "specs/${FEATURE_ID}-*" | head -1)
+          if [ -z "$SPEC_FILE" ]; then
+            echo "::error::No spec file found for feature ${FEATURE_ID}. Expected: specs/${FEATURE_ID}-<name>/spec.md"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "spec_file=${SPEC_FILE}" >> "$GITHUB_OUTPUT"
+          echo "Spec found: ${SPEC_FILE}"

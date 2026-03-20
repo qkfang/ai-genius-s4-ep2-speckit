@@ -60,7 +60,7 @@ jobs:
             --output json)
 
           NODE_APP_NAME="${{ vars.APP_NAME || 'aigenius' }}-nodeapp-${{ env.ENVIRONMENT }}"
-          STATIC_TOKEN=$(echo "$OUTPUT" | jq -r '.deploymentToken.value // empty')
+          STATIC_TOKEN=$(echo "$OUTPUT" | jq -r '.staticWebAppToken.value // empty')
 
           echo "nodeAppName=${NODE_APP_NAME}" >> "$GITHUB_OUTPUT"
           echo "staticWebAppToken=${STATIC_TOKEN}" >> "$GITHUB_OUTPUT"
@@ -71,34 +71,28 @@ jobs:
           echo "| Static Web App URL | $(echo "$OUTPUT" | jq -r '.staticWebAppUrl.value') |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Node App Hostname | $(echo "$OUTPUT" | jq -r '.nodeAppHostname.value') |" >> "$GITHUB_STEP_SUMMARY"
 
-  # ── 2. Build & deploy the Node.js API to Azure App Service ─────
+  # ── 2. Build & deploy the .NET API to Azure App Service ────────
   deploy-api:
     name: Deploy API → Azure App Service
     runs-on: ubuntu-latest
     needs: infra
     defaults:
       run:
-        working-directory: src/aigenius-api
+        working-directory: src/ai-genius-api
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: src/aigenius-api/package-lock.json
+          dotnet-version: "10.x"
 
-      - name: Install production dependencies
-        run: npm ci --omit=dev
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Create deployment package
-        run: |
-          cd ..
-          zip -r ../api-deploy.zip aigenius-api/ \
-            --exclude "aigenius-api/node_modules/.cache/*"
-        working-directory: src
+      - name: Publish application
+        run: dotnet publish -c Release -o ${{ github.workspace }}/api-publish
 
       - name: Azure Login (OIDC)
         uses: azure/login@v2
@@ -111,7 +105,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ needs.infra.outputs.nodeAppName }}
-          package: api-deploy.zip
+          package: ${{ github.workspace }}/api-publish
 
   # ── 3. Build & deploy the React app to Azure Static Web App ────
   deploy-web:
@@ -120,7 +114,7 @@ jobs:
     needs: infra
     defaults:
       run:
-        working-directory: src/aigenius-web
+        working-directory: src/ai-genius-web
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -130,7 +124,7 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: src/aigenius-web/package-lock.json
+          cache-dependency-path: src/ai-genius-web/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -145,6 +139,6 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ needs.infra.outputs.staticWebAppToken || secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: "upload"
-          app_location: "src/aigenius-web"
+          app_location: "src/ai-genius-web"
           output_location: "dist"
           skip_app_build: true

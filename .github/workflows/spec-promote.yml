@@ -1,0 +1,100 @@
+name: Spec Promote — Summary & Promotion Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  generate-summary:
+    name: Generate spec summary artifact
+    runs-on: ubuntu-latest
+    outputs:
+      risk: ${{ steps.meta.outputs.risk }}
+      breaking: ${{ steps.meta.outputs.breaking }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Locate and parse spec
+        id: meta
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          FEATURE_ID=$(echo "$BRANCH" | grep -oP '^\d+' || true)
+          SPEC_FILE=""
+          RISK="medium"
+          BREAKING="false"
+          TITLE="(no spec)"
+
+          if [ -n "$FEATURE_ID" ]; then
+            SPEC_FILE=$(find specs -name "spec.md" -path "specs/${FEATURE_ID}-*" | head -1)
+          fi
+
+          if [ -n "$SPEC_FILE" ]; then
+            FRONTMATTER=$(awk '/^---/{found++; if(found==2) exit} found==1 && !/^---/' "$SPEC_FILE")
+            RISK=$(echo "$FRONTMATTER"     | grep -oP '(?<=risk:\s)\S+'     | tr '[:upper:]' '[:lower:]' || echo "medium")
+            BREAKING=$(echo "$FRONTMATTER" | grep -oP '(?<=breaking:\s)\S+' | tr '[:upper:]' '[:lower:]' || echo "false")
+            TITLE=$(grep -m1 '^# ' "$SPEC_FILE" | sed 's/^# //')
+          fi
+
+          echo "risk=${RISK}"         >> "$GITHUB_OUTPUT"
+          echo "breaking=${BREAKING}" >> "$GITHUB_OUTPUT"
+          echo "spec_file=${SPEC_FILE}" >> "$GITHUB_OUTPUT"
+          echo "title=${TITLE}"       >> "$GITHUB_OUTPUT"
+
+      - name: Write spec-summary.txt
+        run: |
+          SPEC_FILE="${{ steps.meta.outputs.spec_file }}"
+          {
+            echo "======================================"
+            echo " Spec Summary — PR #${{ github.event.pull_request.number }}"
+            echo "======================================"
+            echo "Branch:         ${{ github.head_ref }}"
+            echo "PR title:       ${{ github.event.pull_request.title }}"
+            echo "Spec title:     ${{ steps.meta.outputs.title }}"
+            echo "Risk level:     ${{ steps.meta.outputs.risk }}"
+            echo "Breaking change: ${{ steps.meta.outputs.breaking }}"
+            echo "Spec file:      ${SPEC_FILE:-none}"
+            echo "Generated at:   $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo "======================================"
+            if [ -n "$SPEC_FILE" ]; then
+              echo ""
+              echo "--- Full spec contents ---"
+              cat "$SPEC_FILE"
+            fi
+          } > spec-summary.txt
+
+      - name: Upload spec summary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-summary-pr-${{ github.event.pull_request.number }}
+          path: spec-summary.txt
+          retention-days: 30
+
+  promotion-gate:
+    name: Promotion gate (high-risk block)
+    runs-on: ubuntu-latest
+    needs: generate-summary
+    steps:
+      - name: Enforce high-risk approval requirement
+        run: |
+          RISK="${{ needs.generate-summary.outputs.risk }}"
+          BREAKING="${{ needs.generate-summary.outputs.breaking }}"
+
+          echo "Risk level:      ${RISK}"
+          echo "Breaking change: ${BREAKING}"
+
+          if [ "$RISK" = "high" ]; then
+            echo "::error::Risk level is HIGH. This PR requires approval from the spec-reviewer team before it can be merged."
+            echo "::error::Add the 'spec-reviewer' team as a required reviewer or use a CODEOWNERS rule on specs/."
+            exit 1
+          fi
+
+          if [ "$BREAKING" = "true" ]; then
+            echo "::warning::Breaking change detected. Confirm downstream consumers are aware."
+          fi
+
+          echo "Promotion gate passed."

@@ -1,0 +1,73 @@
+name: Spec Metadata — Risk & Breaking Change
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  extract-metadata:
+    name: Extract spec metadata
+    runs-on: ubuntu-latest
+    outputs:
+      risk: ${{ steps.meta.outputs.risk }}
+      breaking: ${{ steps.meta.outputs.breaking }}
+      spec_file: ${{ steps.meta.outputs.spec_file }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Locate spec file
+        id: locate
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          FEATURE_ID=$(echo "$BRANCH" | grep -oP '^\d+' || true)
+          if [ -z "$FEATURE_ID" ]; then
+            echo "spec_file=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SPEC_FILE=$(find specs -name "spec.md" -path "specs/${FEATURE_ID}-*" | head -1)
+          echo "spec_file=${SPEC_FILE}" >> "$GITHUB_OUTPUT"
+
+      - name: Parse front-matter
+        id: meta
+        run: |
+          SPEC_FILE="${{ steps.locate.outputs.spec_file }}"
+          if [ -z "$SPEC_FILE" ]; then
+            echo "risk=medium"    >> "$GITHUB_OUTPUT"
+            echo "breaking=false" >> "$GITHUB_OUTPUT"
+            echo "spec_file="     >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Extract YAML front-matter between the first pair of --- delimiters
+          FRONTMATTER=$(awk '/^---/{found++; if(found==2) exit} found==1 && !/^---/' "$SPEC_FILE")
+
+          RISK=$(echo "$FRONTMATTER"    | grep -oP '(?<=risk:\s)\S+' | tr '[:upper:]' '[:lower:]' || echo "medium")
+          BREAKING=$(echo "$FRONTMATTER" | grep -oP '(?<=breaking:\s)\S+' | tr '[:upper:]' '[:lower:]' || echo "false")
+
+          echo "risk=${RISK}"         >> "$GITHUB_OUTPUT"
+          echo "breaking=${BREAKING}" >> "$GITHUB_OUTPUT"
+          echo "spec_file=${SPEC_FILE}" >> "$GITHUB_OUTPUT"
+
+          # Post a summary table to the Actions job summary
+          echo "### Spec Metadata" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |"  >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|"  >> "$GITHUB_STEP_SUMMARY"
+          echo "| Spec file | \`${SPEC_FILE}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Risk level | **${RISK}** |"     >> "$GITHUB_STEP_SUMMARY"
+          echo "| Breaking change | ${BREAKING} |" >> "$GITHUB_STEP_SUMMARY"
+
+  flag-breaking:
+    name: Flag breaking changes
+    runs-on: ubuntu-latest
+    needs: extract-metadata
+    if: needs.extract-metadata.outputs.breaking == 'true'
+    steps:
+      - name: Annotate PR as breaking change
+        run: |
+          echo "::warning::This PR is marked as a BREAKING CHANGE in the spec."
+          echo "::warning::Ensure downstream consumers are notified before merging."

@@ -16,33 +16,31 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: src/aigenius-api
+        working-directory: src/ai-genius-api
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: src/aigenius-api/package-lock.json
+          dotnet-version: "10.x"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore dependencies
+        run: dotnet restore
 
-      - name: Run linter
-        run: npm run lint
+      - name: Build
+        run: dotnet build --no-restore -c Release
 
       - name: Run tests
-        run: npm test
+        run: dotnet test --no-build -c Release --verbosity normal
 
   build-web:
     name: Web — Build
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: src/aigenius-web
+        working-directory: src/ai-genius-web
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,7 +50,7 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: src/aigenius-web/package-lock.json
+          cache-dependency-path: src/ai-genius-web/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -67,5 +65,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-dist
-          path: src/aigenius-web/dist/
+          path: src/ai-genius-web/dist/
           retention-days: 7

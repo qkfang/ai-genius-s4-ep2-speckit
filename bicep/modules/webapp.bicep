@@ -19,8 +19,8 @@ param environment string
 @allowed(['F1', 'B1', 'B2', 'S1'])
 param appServicePlanSku string = 'B1'
 
-@description('Node.js runtime version for the web app.')
-param nodeVersion string = 'NODE|20-lts'
+@description('.NET runtime version for the web app.')
+param dotnetVersion string = 'DOTNETCORE|10.0'
 
 // ── App Service Plan ─────────────────────────────────────────
 
@@ -58,13 +58,17 @@ resource webApp 'Microsoft.Web/sites@2023-01-01' = {
     serverFarmId: appServicePlan.id
     httpsOnly: true
     siteConfig: {
-      linuxFxVersion: nodeVersion
+      linuxFxVersion: dotnetVersion
       alwaysOn: appServicePlanSku != 'F1'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       appSettings: [
         {
           name: 'NODE_ENV'
+          value: environment
+        }
+        {
+          name: 'ASPNETCORE_ENVIRONMENT'
           value: environment
         }
         {

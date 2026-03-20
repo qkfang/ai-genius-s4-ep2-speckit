@@ -54,3 +54,6 @@ output nodeAppHostname string = webApp.outputs.hostname
 
 @description('Resource ID of the App Service.')
 output nodeAppResourceId string = webApp.outputs.resourceId
+
+@description('Deployment token for the Azure Static Web App CI/CD.')
+output staticWebAppToken string = staticWebApp.outputs.deploymentToken
