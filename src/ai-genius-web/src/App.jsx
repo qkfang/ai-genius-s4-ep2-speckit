@@ -69,7 +69,7 @@ function App() {
                 <div key={topic.episode} className={`episode-card${topic.episode === 2 ? ' episode-card--speckit' : ''}`}>
                   {topic.episode === 2 && (
                     <div className="speckit-ep-badge">
-                      <img src="/speckit-logo-small.webp" alt="SpecKit" className="speckit-ep-icon" />
+                      <img src="/speckit-logo-small.webp" alt="SpecKit logo" className="speckit-ep-icon" />
                       <span>SpecKit</span>
                     </div>
                   )}
