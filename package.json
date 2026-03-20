@@ -2,13 +2,13 @@
   "name": "ai-genius-ep2-speckit",
   "version": "1.0.0",
   "description": "Agentic DevOps with SpecKit: Turn Specs into CI/CD Using GitHub Actions",
-  "main": "src/app.js",
+  "main": "src/ai-genius-web/server.js",
   "bin": {
     "speckit": "./speckit/index.js"
   },
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "node --watch src/app.js",
+    "start": "node src/ai-genius-web/server.js",
+    "dev": "node --watch src/ai-genius-web/server.js",
     "lint": "eslint .",
     "test": "jest --forceExit",
     "test:coverage": "jest --coverage --forceExit",

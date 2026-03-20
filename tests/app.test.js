@@ -1,7 +1,7 @@
 'use strict';
 
 const request = require('supertest');
-const app = require('../src/app');
+const app = require('../src/ai-genius-web/server');
 
 describe('Express App', () => {
   describe('GET /', () => {

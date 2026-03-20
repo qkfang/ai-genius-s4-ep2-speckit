@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "dgSpecHash": "imisfiGLO1E=",
+  "success": true,
+  "projectFilePath": "/home/runner/work/ai-genius-s4-ep2-speckit/ai-genius-s4-ep2-speckit/src/ai-genius-api/ai-genius-api.csproj",
+  "expectedPackageFiles": [
+    "/tmp/codeql-scratch-e41309bb4ccaf92b/dbs/csharp/working/packages/microsoft.aspnetcore.openapi/10.0.2/microsoft.aspnetcore.openapi.10.0.2.nupkg.sha512",
+    "/tmp/codeql-scratch-e41309bb4ccaf92b/dbs/csharp/working/packages/microsoft.openapi/2.0.0/microsoft.openapi.2.0.0.nupkg.sha512",
+    "/tmp/codeql-scratch-e41309bb4ccaf92b/dbs/csharp/working/packages/system.text.json/8.0.5/system.text.json.8.0.5.nupkg.sha512",
+    "/tmp/codeql-scratch-e41309bb4ccaf92b/dbs/csharp/working/packages/microsoft.netcore.app.ref/10.0.2/microsoft.netcore.app.ref.10.0.2.nupkg.sha512",
+    "/tmp/codeql-scratch-e41309bb4ccaf92b/dbs/csharp/working/packages/microsoft.aspnetcore.app.ref/10.0.2/microsoft.aspnetcore.app.ref.10.0.2.nupkg.sha512",
+    "/tmp/codeql-scratch-e41309bb4ccaf92b/dbs/csharp/working/packages/microsoft.netcore.app.host.linux-x64/10.0.2/microsoft.netcore.app.host.linux-x64.10.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}
