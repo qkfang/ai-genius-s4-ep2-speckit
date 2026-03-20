@@ -14,20 +14,13 @@
 
 ## 🗺️ Session Overview
 
-| Step | Topic |
+| Part | Topic |
 |------|-------|
-| [Step 1](#step-1--install-specify-cli) | Install Specify CLI |
-| [Step 2](#step-2--define-your-constitution) | Define Your Constitution (`/speckit.constitution`) |
-| [Step 3](#step-3--create-the-spec) | Create the Spec — Frontend Deployment (`/speckit.specify`) |
-| [Step 4](#step-4--clarify-the-spec) | Clarify the Spec (`/speckit.clarify`) |
-| [Step 5](#step-5--validate-the-spec) | Validate the Spec (`/speckit.checklist`) |
-| [Step 6](#step-6--create-a-technical-implementation-plan) | Create Implementation Plan (`/speckit.plan`) |
-| [Step 7](#step-7--generate-tasks) | Generate Tasks (`/speckit.tasks`) |
-| [Step 8](#step-8--analyze-and-validate) | Analyze and Validate (`/speckit.analyze`) |
-| [Step 9](#step-9--implement) | Implement (`/speckit.implement`) |
-| [Step 10](#step-10--run-the-frontend-deployment-end-to-end) | Run the Frontend Deployment End-to-End |
-| [Step 11](#step-11--speed-spec-backend-api-deployment) | Speed Spec: Backend API Deployment via GitHub Actions |
-| [Step 12](#step-12--new-spec-cicd-with-bicep-infrastructure) | New Spec: CI/CD with Bicep Infrastructure |
+| [Part 1 — Setup](#part-1--setup) | Install Specify CLI & Define Your Constitution |
+| [Part 2 — Existing Infrastructure Pipelines](#part-2--existing-infrastructure-pipelines) | Bicep CI/CD for Azure Infrastructure |
+| [Part 3 — Frontend App](#part-3--frontend-app) | Spec-Driven Frontend Deployment (Specify → Implement → Deploy) |
+| [Part 4 — API App](#part-4--api-app) | Backend API Deployment via GitHub Actions |
+| [Part 5 — Add Gates](#part-5--add-gates) | Quality Gates & Deployment Approvals |
 
 ---
 
@@ -62,7 +55,9 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 ---
 
-## Step 1 — Install Specify CLI
+## Part 1 — Setup
+
+### Step 1 — Install Specify CLI
 
 The `specify` CLI scaffolds the spec-kit file structure and installs the `/speckit.*`
 slash commands into your AI agent. For GitHub Copilot, this writes prompt files into
@@ -121,7 +116,7 @@ After initialisation, Copilot gains these slash commands in its context:
 
 ---
 
-## Step 2 — Define Your Constitution
+### Step 2 — Define Your Constitution
 
 **In GitHub Copilot Chat**, use `/speckit.constitution` to establish the governing
 principles for this project. The constitution is committed to `specs/constitution.md` and
@@ -143,7 +138,90 @@ Review and commit it.
 
 ---
 
-## Step 3 — Create the Spec
+## Part 2 — Existing Infrastructure Pipelines
+
+Provision all Azure infrastructure using Bicep templates before deploying applications.
+This ensures the target resources (App Service, Static Web App) exist before the
+application deployment workflows run.
+
+### 2.1 — Create the Bicep CI/CD Spec
+
+```
+/speckit.specify Add Bicep infrastructure-as-code CI/CD to the AI Genius project.
+Create a GitHub Actions workflow (.github/workflows/deploy-infra.yml) that:
+1. Triggers on every push to main (or manually via workflow_dispatch).
+2. Authenticates to Azure via OIDC.
+3. Creates the resource group if it does not exist.
+4. Runs az deployment group create with bicep/main.bicep to provision:
+   - Azure App Service Plan (Linux B1) + Web App (for the API)
+   - Azure Static Web App (for the frontend)
+5. Outputs the App Service name and Static Web App token for downstream
+   deploy-api and deploy-web workflows.
+All Azure resources must be tagged with app, environment, and managedBy=bicep.
+The Bicep templates already exist in bicep/main.bicep and bicep/modules/.
+```
+
+### 2.2 — Speed-Run: Clarify → Plan → Tasks → Implement
+
+```
+/speckit.clarify The Bicep modules are:
+  - bicep/modules/webapp.bicep: App Service Plan + Web App
+  - bicep/modules/staticwebapp.bicep: Static Web App
+Parameters: appName (default: aigenius), environment (development/staging/production),
+appServicePlanSku (default: B1), staticWebAppSku (default: Free).
+The infra workflow runs before deploy-api and deploy-web. Use workflow outputs
+or GitHub variables to pass resource names between workflows.
+```
+
+```
+/speckit.plan
+Workflow: .github/workflows/deploy-infra.yml
+Steps: checkout → azure login (OIDC) → create resource group → az deployment group create
+Outputs: nodeAppName, staticWebAppToken
+Downstream workflows (deploy-api, deploy-web) consume these outputs.
+```
+
+```
+/speckit.tasks
+```
+
+```
+/speckit.implement
+```
+
+### 2.3 — Push and Verify Infrastructure
+
+```bash
+git add .
+git commit -m "feat: add Bicep infrastructure CI/CD workflow"
+git push origin main
+```
+
+Verify in the **Actions** tab that the infrastructure workflow completes successfully.
+
+### 2.4 — Bicep Parameters Reference
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `appName` | `aigenius` | Base name for all Azure resources |
+| `location` | resource group location | Azure region |
+| `environment` | `development` | `development`, `staging`, or `production` |
+| `appServicePlanSku` | `B1` | App Service Plan SKU (`F1`, `B1`, `B2`, `S1`) |
+| `staticWebAppSku` | `Free` | Static Web App tier (`Free` or `Standard`) |
+
+### 2.5 — Resources Provisioned by Bicep
+
+| Resource | Bicep module | Purpose |
+|----------|-------------|--------|
+| Azure App Service Plan (Linux B1) | `modules/webapp.bicep` | Compute plan for the API |
+| Azure App Service | `modules/webapp.bicep` | Hosts `src/ai-genius-api` |
+| Azure Static Web App | `modules/staticwebapp.bicep` | Hosts built `src/ai-genius-web` |
+
+---
+
+## Part 3 — Frontend App
+
+### Step 3 — Create the Spec
 
 **In GitHub Copilot Chat**, use `/speckit.specify` to describe what you want to build.
 Focus on the **what** and **why** — not the tech stack.
@@ -177,7 +255,7 @@ cat specs/001-frontend-deploy/spec.md
 
 ---
 
-## Step 4 — Clarify the Spec
+### Step 4 — Clarify the Spec
 
 **In GitHub Copilot Chat**, use `/speckit.clarify` to resolve any ambiguities.
 Run it once with a general focus, then again with specific concerns.
@@ -209,7 +287,7 @@ Review `specs/001-frontend-deploy/spec.md` after each clarify pass to confirm th
 
 ---
 
-## Step 5 — Validate the Spec
+### Step 5 — Validate the Spec
 
 **In GitHub Copilot Chat**, use `/speckit.checklist` to run a quality check on
 the specification before moving to implementation planning. This acts like a
@@ -231,7 +309,7 @@ Address any failing checklist items before continuing.
 
 ---
 
-## Step 6 — Create a Technical Implementation Plan
+### Step 6 — Create a Technical Implementation Plan
 
 **In GitHub Copilot Chat**, use `/speckit.plan` to provide the tech stack and
 architecture choices. Spec-Kit translates the business requirements into a
@@ -265,7 +343,7 @@ Spec-Kit generates into `specs/001-frontend-deploy/`:
 
 ---
 
-## Step 7 — Generate Tasks
+### Step 7 — Generate Tasks
 
 **In GitHub Copilot Chat**, use `/speckit.tasks` to generate an actionable task
 list from the implementation plan. Tasks are derived from the contracts, data
@@ -286,7 +364,7 @@ Review `specs/001-frontend-deploy/tasks.md` and adjust priorities if needed.
 
 ---
 
-## Step 8 — Analyze and Validate
+### Step 8 — Analyze and Validate
 
 **In GitHub Copilot Chat**, use `/speckit.analyze` to run a cross-artifact
 consistency check. This catches mismatches between the spec, plan, contracts,
@@ -307,7 +385,7 @@ Address any inconsistencies reported before proceeding.
 
 ---
 
-## Step 9 — Implement
+### Step 9 — Implement
 
 **In GitHub Copilot Chat**, use `/speckit.implement` to execute the task list and
 build the frontend deployment workflow.
@@ -335,7 +413,7 @@ git commit -m "feat: add frontend deployment workflow"
 
 ---
 
-## Step 10 — Run the Frontend Deployment End-to-End
+### Step 10 — Run the Frontend Deployment End-to-End
 
 With the frontend deployment workflow implemented, push to GitHub and run the
 pipeline end-to-end to confirm everything works.
@@ -354,7 +432,7 @@ GitHub repository under **Settings → Secrets and variables → Actions**:
 | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID |
 
 > **Tip:** If you haven't created an Azure OIDC federated credential yet, follow the
-> Azure AD setup in [Step 12](#step-12--new-spec-cicd-with-bicep-infrastructure).
+> Azure AD setup in [Part 2](#part-2--existing-infrastructure-pipelines).
 
 ### 10.2 — Push and Trigger the Workflow
 
@@ -383,13 +461,13 @@ If any step fails, check the workflow logs for errors and fix before proceeding.
 
 ---
 
-## Step 11 — Speed Spec: Backend API Deployment via GitHub Actions
+## Part 4 — API App
 
-Now that the frontend is deploying successfully, use the Spec-Kit **speed workflow**
-to create a second spec for deploying the backend API. The speed workflow runs all
-spec-kit commands in rapid succession — specify → clarify → plan → tasks → implement.
+Use the Spec-Kit **speed workflow** to create a spec for deploying the backend API.
+The speed workflow runs all spec-kit commands in rapid succession —
+specify → clarify → plan → tasks → implement.
 
-### 11.1 — Create the Backend Deployment Spec
+### 4.1 — Create the Backend Deployment Spec
 
 ```
 /speckit.specify Deploy the AI Genius backend API via GitHub Actions.
@@ -403,7 +481,7 @@ The App Service must enforce HTTPS only. The workflow must produce a green
 check and the /health endpoint must return { "status": "ok" }.
 ```
 
-### 11.2 — Speed-Run: Clarify, Plan, Tasks
+### 4.2 — Speed-Run: Clarify, Plan, Tasks
 
 Run each command in quick succession without pausing:
 
@@ -425,7 +503,7 @@ Authentication: OIDC with id-token: write permission.
 /speckit.tasks
 ```
 
-### 11.3 — Implement and Deploy
+### 4.3 — Implement and Deploy
 
 ```
 /speckit.implement
@@ -456,89 +534,91 @@ Expected:
 
 ---
 
-## Step 12 — New Spec: CI/CD with Bicep Infrastructure
+## Part 5 — Add Gates
 
-Create a third spec to provision all Azure infrastructure using Bicep templates,
-deployed via a GitHub Actions workflow. This consolidates infrastructure-as-code
-into the CI/CD pipeline.
+Quality gates ensure that code changes pass through validation checkpoints before
+reaching production. Add gates to the CI/CD pipeline to enforce code quality,
+security, and deployment approvals.
 
-### 12.1 — Create the Bicep CI/CD Spec
+### 5.1 — Environment Protection Rules
 
-```
-/speckit.specify Add Bicep infrastructure-as-code CI/CD to the AI Genius project.
-Create a GitHub Actions workflow (.github/workflows/deploy-infra.yml) that:
-1. Triggers on every push to main (or manually via workflow_dispatch).
-2. Authenticates to Azure via OIDC.
-3. Creates the resource group if it does not exist.
-4. Runs az deployment group create with bicep/main.bicep to provision:
-   - Azure App Service Plan (Linux B1) + Web App (for the API)
-   - Azure Static Web App (for the frontend)
-5. Outputs the App Service name and Static Web App token for downstream
-   deploy-api and deploy-web workflows.
-All Azure resources must be tagged with app, environment, and managedBy=bicep.
-The Bicep templates already exist in bicep/main.bicep and bicep/modules/.
-```
+Configure environment protection rules in GitHub to require manual approvals
+before deploying to production.
 
-### 12.2 — Speed-Run: Clarify → Plan → Tasks → Implement
+In your GitHub repository, go to **Settings → Environments** and create environments:
 
-```
-/speckit.clarify The Bicep modules are:
-  - bicep/modules/webapp.bicep: App Service Plan + Web App
-  - bicep/modules/staticwebapp.bicep: Static Web App
-Parameters: appName (default: aigenius), environment (development/staging/production),
-appServicePlanSku (default: B1), staticWebAppSku (default: Free).
-The infra workflow runs before deploy-api and deploy-web. Use workflow outputs
-or GitHub variables to pass resource names between workflows.
-```
+| Environment | Protection Rules |
+|-------------|------------------|
+| `development` | None (auto-deploy) |
+| `staging` | Required reviewers (1 approver) |
+| `production` | Required reviewers (2 approvers) + wait timer (5 min) |
 
-```
-/speckit.plan
-Workflow: .github/workflows/deploy-infra.yml
-Steps: checkout → azure login (OIDC) → create resource group → az deployment group create
-Outputs: nodeAppName, staticWebAppToken
-Downstream workflows (deploy-api, deploy-web) consume these outputs.
-```
+### 5.2 — Add Branch Protection
 
-```
-/speckit.tasks
-```
+Configure branch protection rules under **Settings → Branches → main**:
 
-```
-/speckit.implement
-```
+- ✅ Require a pull request before merging
+- ✅ Require status checks to pass (CI build + tests)
+- ✅ Require review from code owners
+- ✅ Do not allow bypassing the above settings
 
-### 12.3 — Push and Verify End-to-End
+### 5.3 — Add CI Quality Checks
 
-```bash
-git add .
-git commit -m "feat: add Bicep infrastructure CI/CD workflow"
-git push origin main
-```
+Create or update `.github/workflows/ci.yml` to run on every pull request:
 
-Verify in the **Actions** tab that all three workflows complete successfully:
+```yaml
+name: CI
 
-```
-infra (deploy-infra.yml)  ──┬──▶  deploy-api.yml
-                            └──▶  deploy-web.yml
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Frontend
+        run: |
+          cd src/ai-genius-web
+          npm ci
+          npm run build
+
+      - name: Build API
+        run: |
+          cd src/ai-genius-api
+          dotnet build
+          dotnet test
 ```
 
-### 12.4 — Bicep Parameters Reference
+### 5.4 — Update Deployment Workflows with Environments
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `appName` | `aigenius` | Base name for all Azure resources |
-| `location` | resource group location | Azure region |
-| `environment` | `development` | `development`, `staging`, or `production` |
-| `appServicePlanSku` | `B1` | App Service Plan SKU (`F1`, `B1`, `B2`, `S1`) |
-| `staticWebAppSku` | `Free` | Static Web App tier (`Free` or `Standard`) |
+Add environment references to your deployment workflows so GitHub enforces
+the protection rules:
 
-### 12.5 — Resources Provisioned by Bicep
+```yaml
+# In deploy-web.yml and deploy-api.yml, add:
+jobs:
+  deploy:
+    environment: production    # Triggers approval gate
+    runs-on: ubuntu-latest
+    # ... rest of the job
+```
 
-| Resource | Bicep module | Purpose |
-|----------|-------------|---------|
-| Azure App Service Plan (Linux B1) | `modules/webapp.bicep` | Compute plan for the API |
-| Azure App Service | `modules/webapp.bicep` | Hosts `src/ai-genius-api` |
-| Azure Static Web App | `modules/staticwebapp.bicep` | Hosts built `src/ai-genius-web` |
+### 5.5 — Verify Gates
+
+1. Create a pull request targeting `main`.
+2. Confirm the CI workflow runs and must pass before merge.
+3. After merging, confirm the deployment workflow pauses for approval.
+4. Approve the deployment and verify it completes successfully.
+
+```
+Expected:
+✅ PRs require passing CI checks before merge
+✅ Deployments to production require manual approval
+✅ Environment protection rules are enforced
+```
 
 ---
 
