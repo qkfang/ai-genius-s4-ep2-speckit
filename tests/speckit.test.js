@@ -252,3 +252,225 @@ describe('SpecKit — Pipeline Generator', () => {
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Spec Extractor tests
+// ─────────────────────────────────────────────────────────────────────────────
+const {
+  validateChangeSpec,
+  extractRisk,
+  extractComponents,
+  extractPromotionRules,
+  evaluatePromotionGate,
+  generateSummary,
+  VALID_RISK_LEVELS,
+  VALID_CHANGE_TYPES,
+} = require('../speckit/lib/spec-extractor');
+
+const CHANGE_SPEC_PATH = path.resolve(__dirname, '../specs/change.spec.yaml');
+
+const minChangeSpec = {
+  change: {
+    title: 'Add health dashboard',
+    type: 'feature',
+    risk: 'low',
+    breaking: false,
+  },
+};
+
+describe('SpecKit — Spec Extractor', () => {
+  // ── validateChangeSpec ────────────────────────────────────────────────────
+  describe('validateChangeSpec', () => {
+    it('should pass for the real change.spec.yaml', () => {
+      const spec = parseSpec(CHANGE_SPEC_PATH);
+      const { valid, errors } = validateChangeSpec(spec);
+      expect(valid).toBe(true);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('should pass for a minimal valid change spec', () => {
+      const { valid, errors } = validateChangeSpec(minChangeSpec);
+      expect(valid).toBe(true);
+      expect(errors).toHaveLength(0);
+    });
+
+    it('should fail when the top-level "change" key is missing', () => {
+      const { valid, errors } = validateChangeSpec({});
+      expect(valid).toBe(false);
+      expect(errors.some((e) => e.includes('"change"'))).toBe(true);
+    });
+
+    it('should fail when title is missing', () => {
+      const spec = { change: { type: 'feature', risk: 'low', breaking: false } };
+      const { valid, errors } = validateChangeSpec(spec);
+      expect(valid).toBe(false);
+      expect(errors.some((e) => e.includes('title'))).toBe(true);
+    });
+
+    it('should fail when type is invalid', () => {
+      const spec = { change: { title: 'x', type: 'hack', risk: 'low', breaking: false } };
+      const { valid, errors } = validateChangeSpec(spec);
+      expect(valid).toBe(false);
+      expect(errors.some((e) => e.includes('change.type'))).toBe(true);
+    });
+
+    it('should fail when risk is invalid', () => {
+      const spec = { change: { title: 'x', type: 'fix', risk: 'extreme', breaking: false } };
+      const { valid, errors } = validateChangeSpec(spec);
+      expect(valid).toBe(false);
+      expect(errors.some((e) => e.includes('change.risk'))).toBe(true);
+    });
+
+    it('should fail when breaking is not a boolean', () => {
+      const spec = { change: { title: 'x', type: 'fix', risk: 'low', breaking: 'yes' } };
+      const { valid, errors } = validateChangeSpec(spec);
+      expect(valid).toBe(false);
+      expect(errors.some((e) => e.includes('change.breaking'))).toBe(true);
+    });
+
+    it('should fail when a component has an invalid impact', () => {
+      const spec = {
+        change: {
+          title: 'x', type: 'fix', risk: 'low', breaking: false,
+          components: [{ name: 'svc', impact: 'broken' }],
+        },
+      };
+      const { valid, errors } = validateChangeSpec(spec);
+      expect(valid).toBe(false);
+      expect(errors.some((e) => e.includes('impact'))).toBe(true);
+    });
+
+    it('should export VALID_RISK_LEVELS and VALID_CHANGE_TYPES', () => {
+      expect(Array.isArray(VALID_RISK_LEVELS)).toBe(true);
+      expect(VALID_RISK_LEVELS).toContain('high');
+      expect(Array.isArray(VALID_CHANGE_TYPES)).toBe(true);
+      expect(VALID_CHANGE_TYPES).toContain('breaking');
+    });
+  });
+
+  // ── extractRisk ───────────────────────────────────────────────────────────
+  describe('extractRisk', () => {
+    it('should return correct metadata for a low-risk non-breaking spec', () => {
+      const { risk, breaking, type } = extractRisk(minChangeSpec);
+      expect(risk).toBe('low');
+      expect(breaking).toBe(false);
+      expect(type).toBe('feature');
+    });
+
+    it('should return rationale mentioning "Breaking" when breaking: true', () => {
+      const spec = { change: { ...minChangeSpec.change, breaking: true } };
+      const { breaking, rationale } = extractRisk(spec);
+      expect(breaking).toBe(true);
+      expect(rationale).toMatch(/Breaking/);
+    });
+
+    it('should return rationale mentioning "High-risk" when risk is high', () => {
+      const spec = { change: { ...minChangeSpec.change, risk: 'high' } };
+      const { rationale } = extractRisk(spec);
+      expect(rationale).toMatch(/High-risk/);
+    });
+  });
+
+  // ── extractComponents ─────────────────────────────────────────────────────
+  describe('extractComponents', () => {
+    it('should return an empty array when no components are defined', () => {
+      expect(extractComponents(minChangeSpec)).toEqual([]);
+    });
+
+    it('should return the components array from the spec', () => {
+      const spec = {
+        change: {
+          ...minChangeSpec.change,
+          components: [{ name: 'api', impact: 'modified' }],
+        },
+      };
+      const comps = extractComponents(spec);
+      expect(comps).toHaveLength(1);
+      expect(comps[0].name).toBe('api');
+    });
+  });
+
+  // ── extractPromotionRules ─────────────────────────────────────────────────
+  describe('extractPromotionRules', () => {
+    it('should return defaults when no promotion block is defined', () => {
+      const rules = extractPromotionRules(minChangeSpec);
+      expect(rules.require_approvals).toBe(1);
+      expect(rules.require_passing_tests).toBe(true);
+      expect(Array.isArray(rules.environments)).toBe(true);
+    });
+
+    it('should merge spec-defined rules with defaults', () => {
+      const spec = {
+        change: {
+          ...minChangeSpec.change,
+          promotion: { require_approvals: 2, environments: ['staging'] },
+        },
+      };
+      const rules = extractPromotionRules(spec);
+      expect(rules.require_approvals).toBe(2);
+      expect(rules.environments).toEqual(['staging']);
+      expect(rules.require_passing_tests).toBe(true);
+    });
+  });
+
+  // ── evaluatePromotionGate ─────────────────────────────────────────────────
+  describe('evaluatePromotionGate', () => {
+    it('should not block staging for a low-risk non-breaking change', () => {
+      const { blocked } = evaluatePromotionGate(minChangeSpec, 'staging');
+      expect(blocked).toBe(false);
+    });
+
+    it('should block production for a breaking change', () => {
+      const spec = { change: { ...minChangeSpec.change, breaking: true } };
+      const { blocked, reasons } = evaluatePromotionGate(spec, 'production');
+      expect(blocked).toBe(true);
+      expect(reasons.some((r) => r.includes('Breaking'))).toBe(true);
+    });
+
+    it('should block production for a high-risk change', () => {
+      const spec = { change: { ...minChangeSpec.change, risk: 'high' } };
+      const { blocked, reasons } = evaluatePromotionGate(spec, 'production');
+      expect(blocked).toBe(true);
+      expect(reasons.some((r) => r.includes('High-risk'))).toBe(true);
+    });
+
+    it('should block when the environment is not in the allowed list', () => {
+      const spec = {
+        change: { ...minChangeSpec.change, promotion: { environments: ['staging'] } },
+      };
+      const { blocked } = evaluatePromotionGate(spec, 'production');
+      expect(blocked).toBe(true);
+    });
+  });
+
+  // ── generateSummary ───────────────────────────────────────────────────────
+  describe('generateSummary', () => {
+    it('should return a non-empty markdown string', () => {
+      const md = generateSummary(minChangeSpec);
+      expect(typeof md).toBe('string');
+      expect(md.length).toBeGreaterThan(0);
+    });
+
+    it('should include the change title', () => {
+      const md = generateSummary(minChangeSpec);
+      expect(md).toContain(minChangeSpec.change.title);
+    });
+
+    it('should include risk and breaking status', () => {
+      const md = generateSummary(minChangeSpec);
+      expect(md).toContain('LOW');
+      expect(md).toContain('No');
+    });
+
+    it('should include the Promotion Gate Results section', () => {
+      const md = generateSummary(minChangeSpec);
+      expect(md).toContain('Promotion Gate Results');
+    });
+
+    it('should show BLOCKED for a breaking change targeting production', () => {
+      const spec = { change: { ...minChangeSpec.change, breaking: true } };
+      const md = generateSummary(spec);
+      expect(md).toContain('Blocked');
+    });
+  });
+});

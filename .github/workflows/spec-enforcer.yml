@@ -1,0 +1,189 @@
+name: Spec Enforcer — Require Change Spec on PRs
+
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow enforces that every pull request includes a change spec.
+#
+# Pattern: "the pipeline validates intent, not just code"
+#
+#   1. Check that specs/change.spec.yaml exists in the PR branch.
+#   2. Validate the change spec with SpecKit (schema + required fields).
+#   3. Extract and print risk level, breaking change flag, and components.
+#   4. Post a summary comment on the PR so reviewers see intent up front.
+#
+# If the spec is missing or invalid, the PR is blocked until it is added.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      spec_file:
+        description: "Change spec file to validate"
+        required: false
+        default: "specs/change.spec.yaml"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  SPEC_FILE: ${{ inputs.spec_file || 'specs/change.spec.yaml' }}
+
+jobs:
+  # ── Job 1: Enforce spec presence ─────────────────────────────────────────
+  enforce-spec:
+    name: "📋 Enforce Change Spec"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Step: Check spec file exists ──────────────────────────────────────
+      - name: Check spec file exists
+        id: check
+        run: |
+          if [ ! -f "${{ env.SPEC_FILE }}" ]; then
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo ""
+            echo "╔══════════════════════════════════════════════════════════╗"
+            echo "║  ❌  Change spec not found                               ║"
+            echo "╚══════════════════════════════════════════════════════════╝"
+            echo ""
+            echo "  Expected: ${{ env.SPEC_FILE }}"
+            echo ""
+            echo "  Every pull request must include a change spec so the"
+            echo "  pipeline can validate intent, not just code."
+            echo ""
+            echo "  To fix: create specs/change.spec.yaml with at least:"
+            echo ""
+            echo "    change:"
+            echo "      title: \"Your change title\""
+            echo "      type: feature"
+            echo "      risk: low"
+            echo "      breaking: false"
+            echo ""
+            exit 1
+          fi
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          echo "✅ Change spec found: ${{ env.SPEC_FILE }}"
+
+      # ── Step: Validate the change spec ────────────────────────────────────
+      - name: Validate change spec
+        id: validate
+        run: |
+          node -e "
+            const { parseSpec } = require('./speckit/lib/parser');
+            const { validateChangeSpec } = require('./speckit/lib/spec-extractor');
+
+            const spec = parseSpec('${{ env.SPEC_FILE }}');
+            const { valid, errors } = validateChangeSpec(spec);
+
+            if (!valid) {
+              console.error('❌ Change spec is invalid:');
+              errors.forEach(e => console.error('  •', e));
+              process.exit(1);
+            }
+            console.log('✅ Change spec is valid');
+          "
+
+      # ── Step: Extract and print metadata ──────────────────────────────────
+      - name: Extract spec metadata
+        id: metadata
+        run: |
+          node -e "
+            const { parseSpec } = require('./speckit/lib/parser');
+            const { extractRisk, extractComponents, extractPromotionRules } = require('./speckit/lib/spec-extractor');
+
+            const spec = parseSpec('${{ env.SPEC_FILE }}');
+            const { risk, breaking, type } = extractRisk(spec);
+            const components = extractComponents(spec);
+            const rules = extractPromotionRules(spec);
+
+            console.log('CHANGE_TITLE=' + spec.change.title);
+            console.log('CHANGE_TYPE=' + type);
+            console.log('RISK_LEVEL=' + risk);
+            console.log('IS_BREAKING=' + breaking);
+            console.log('COMPONENT_COUNT=' + components.length);
+            console.log('REQUIRE_APPROVALS=' + rules.require_approvals);
+          " | tee metadata.txt
+
+          while IFS='=' read -r key value; do
+            echo "${key,,}=${value}" >> "$GITHUB_OUTPUT"
+          done < metadata.txt
+
+      # ── Step: Print analysis banner ───────────────────────────────────────
+      - name: Print spec analysis
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║          📋  SpecKit — Change Spec Analysis              ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "  📝 Title:       ${{ steps.metadata.outputs.change_title }}"
+          echo "  🏷️  Type:        ${{ steps.metadata.outputs.change_type }}"
+          echo "  ⚠️  Risk:        ${{ steps.metadata.outputs.risk_level }}"
+          echo "  💥 Breaking:    ${{ steps.metadata.outputs.is_breaking }}"
+          echo "  📦 Components:  ${{ steps.metadata.outputs.component_count }} affected"
+          echo "  👥 Approvals:   ${{ steps.metadata.outputs.require_approvals }} required"
+          echo ""
+          echo "  ✅ Spec is present and valid — merge controls applied."
+
+      # ── Step: Post PR comment with spec summary ────────────────────────────
+      - name: Generate summary artifact
+        run: |
+          node speckit/index.js extract ${{ env.SPEC_FILE }} --output /tmp/spec-summary.md
+          echo "### 📋 SpecKit Change Spec Summary" > /tmp/pr-comment.md
+          echo "" >> /tmp/pr-comment.md
+          cat /tmp/spec-summary.md >> /tmp/pr-comment.md
+
+      - name: Post PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/pr-comment.md', 'utf8');
+            // Find and update existing SpecKit comment, or create a new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.startsWith('### 📋 SpecKit Change Spec Summary')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Upload spec summary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: change-spec-summary
+          path: /tmp/spec-summary.md
+          retention-days: 30

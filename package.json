@@ -15,7 +15,8 @@
     "speckit": "node speckit/index.js",
     "speckit:validate": "node speckit/index.js validate specs/app.spec.yaml",
     "speckit:generate": "node speckit/index.js generate specs/app.spec.yaml --output .github/workflows/generated-pipeline.yml",
-    "speckit:run": "node speckit/index.js run specs/app.spec.yaml"
+    "speckit:run": "node speckit/index.js run specs/app.spec.yaml",
+    "speckit:extract": "node speckit/index.js extract specs/change.spec.yaml"
   },
   "keywords": [
     "speckit",

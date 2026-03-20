@@ -1,0 +1,224 @@
+name: Spec Gate — Apply Promotion Rules
+
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow reads the change spec and applies promotion rules before
+# allowing deployment to proceed.
+#
+# Controls enforced:
+#
+#   1. Extract risk level and breaking change flag from the change spec.
+#   2. Evaluate the promotion gate for each target environment.
+#   3. Block deployment if: breaking change → production, high risk → production.
+#   4. Generate a spec summary artifact for audit trail.
+#   5. Apply environment-level conditions so only spec-approved envs deploy.
+#
+# The change spec is the single source of truth for deployment controls.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "specs/**"
+      - "src/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "specs/**"
+      - "src/**"
+  workflow_dispatch:
+    inputs:
+      spec_file:
+        description: "Change spec file to gate against"
+        required: false
+        default: "specs/change.spec.yaml"
+      target_environment:
+        description: "Target environment (staging or production)"
+        required: false
+        default: "staging"
+
+permissions:
+  contents: read
+
+env:
+  SPEC_FILE: ${{ inputs.spec_file || 'specs/change.spec.yaml' }}
+  TARGET_ENV: ${{ inputs.target_environment || 'staging' }}
+
+jobs:
+  # ── Job 1: Spec gate analysis ─────────────────────────────────────────────
+  spec-gate:
+    name: "🚦 Spec Gate Analysis"
+    runs-on: ubuntu-latest
+    outputs:
+      risk_level: ${{ steps.extract.outputs.risk_level }}
+      is_breaking: ${{ steps.extract.outputs.is_breaking }}
+      change_type: ${{ steps.extract.outputs.change_type }}
+      staging_blocked: ${{ steps.gate.outputs.staging_blocked }}
+      production_blocked: ${{ steps.gate.outputs.production_blocked }}
+      require_approvals: ${{ steps.extract.outputs.require_approvals }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Step: Validate spec exists ────────────────────────────────────────
+      - name: Check spec file exists
+        run: |
+          if [ ! -f "${{ env.SPEC_FILE }}" ]; then
+            echo "⚠️  No change spec found at ${{ env.SPEC_FILE }}"
+            echo "   Using default gate rules (low risk, not breaking)"
+          else
+            echo "✅ Change spec found: ${{ env.SPEC_FILE }}"
+          fi
+
+      # ── Step: Extract spec metadata ───────────────────────────────────────
+      - name: Extract spec metadata
+        id: extract
+        run: |
+          if [ ! -f "${{ env.SPEC_FILE }}" ]; then
+            # No spec — use safe defaults and continue
+            echo "risk_level=low" >> "$GITHUB_OUTPUT"
+            echo "is_breaking=false" >> "$GITHUB_OUTPUT"
+            echo "change_type=unknown" >> "$GITHUB_OUTPUT"
+            echo "require_approvals=1" >> "$GITHUB_OUTPUT"
+          else
+            node -e "
+              const { parseSpec } = require('./speckit/lib/parser');
+              const { extractRisk, extractPromotionRules } = require('./speckit/lib/spec-extractor');
+
+              const spec = parseSpec('${{ env.SPEC_FILE }}');
+              const { risk, breaking, type } = extractRisk(spec);
+              const rules = extractPromotionRules(spec);
+
+              console.log('risk_level=' + risk);
+              console.log('is_breaking=' + breaking);
+              console.log('change_type=' + type);
+              console.log('require_approvals=' + rules.require_approvals);
+            " | tee -a "$GITHUB_OUTPUT"
+          fi
+
+      # ── Step: Evaluate promotion gates ────────────────────────────────────
+      - name: Evaluate promotion gates
+        id: gate
+        run: |
+          if [ ! -f "${{ env.SPEC_FILE }}" ]; then
+            echo "staging_blocked=false" >> "$GITHUB_OUTPUT"
+            echo "production_blocked=false" >> "$GITHUB_OUTPUT"
+          else
+            node -e "
+              const { parseSpec } = require('./speckit/lib/parser');
+              const { evaluatePromotionGate } = require('./speckit/lib/spec-extractor');
+
+              const spec = parseSpec('${{ env.SPEC_FILE }}');
+              const staging = evaluatePromotionGate(spec, 'staging');
+              const production = evaluatePromotionGate(spec, 'production');
+
+              console.log('staging_blocked=' + staging.blocked);
+              if (staging.blocked) staging.reasons.forEach(r => console.error('  STAGING:', r));
+
+              console.log('production_blocked=' + production.blocked);
+              if (production.blocked) production.reasons.forEach(r => console.error('  PRODUCTION:', r));
+            " | tee -a "$GITHUB_OUTPUT"
+          fi
+
+      # ── Step: Print gate summary ──────────────────────────────────────────
+      - name: Print gate summary
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════╗"
+          echo "║          🚦  SpecKit — Promotion Gate Results            ║"
+          echo "╚══════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "  Change type:   ${{ steps.extract.outputs.change_type }}"
+          echo "  Risk level:    ${{ steps.extract.outputs.risk_level }}"
+          echo "  Breaking:      ${{ steps.extract.outputs.is_breaking }}"
+          echo ""
+          echo "  Staging gate:     ${{ steps.gate.outputs.staging_blocked == 'true' && '🔴 BLOCKED' || '🟢 CLEAR' }}"
+          echo "  Production gate:  ${{ steps.gate.outputs.production_blocked == 'true' && '🔴 BLOCKED' || '🟢 CLEAR' }}"
+          echo ""
+
+      # ── Step: Generate and upload spec summary artifact ───────────────────
+      - name: Generate spec summary artifact
+        if: hashFiles(env.SPEC_FILE) != ''
+        run: |
+          node speckit/index.js extract ${{ env.SPEC_FILE }} \
+            --output /tmp/spec-gate-summary.md
+          echo "📄 Spec summary generated"
+
+      - name: Upload spec gate summary
+        if: hashFiles(env.SPEC_FILE) != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-gate-summary
+          path: /tmp/spec-gate-summary.md
+          retention-days: 30
+
+  # ── Job 2: CI (runs always) ───────────────────────────────────────────────
+  ci:
+    name: "🧪 CI"
+    runs-on: ubuntu-latest
+    needs: spec-gate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm run test:coverage
+
+  # ── Job 3: Deploy to Staging ──────────────────────────────────────────────
+  deploy-staging:
+    name: "🚀 Deploy Staging"
+    runs-on: ubuntu-latest
+    needs: [spec-gate, ci]
+    # Blocked if the spec gate explicitly blocks staging
+    if: |
+      needs.spec-gate.outputs.staging_blocked != 'true' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to staging (spec-gated)
+        run: |
+          echo "🚀 Deploying to staging"
+          echo "   Risk level: ${{ needs.spec-gate.outputs.risk_level }}"
+          echo "   Breaking:   ${{ needs.spec-gate.outputs.is_breaking }}"
+          echo "✅ Staging deployment complete"
+      - name: Health check
+        run: echo "✅ Health check passed for staging"
+
+  # ── Job 4: Deploy to Production ───────────────────────────────────────────
+  deploy-production:
+    name: "🚀 Deploy Production"
+    runs-on: ubuntu-latest
+    needs: [spec-gate, deploy-staging]
+    # Blocked if breaking change or high risk (production gate)
+    if: |
+      needs.spec-gate.outputs.production_blocked != 'true' &&
+      github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to production (spec-gated)
+        run: |
+          echo "🚀 Deploying to production"
+          echo "   Risk level: ${{ needs.spec-gate.outputs.risk_level }}"
+          echo "   Breaking:   ${{ needs.spec-gate.outputs.is_breaking }}"
+          echo "✅ Production deployment complete"
+      - name: Health check
+        run: echo "✅ Health check passed for production"
+      - name: Configure rollback
+        run: echo "🔄 Rollback point configured for production"

@@ -1,33 +1,36 @@
-# AI Genius Episode 2 — SpecKit: Agentic DevOps
+# AI Genius Episode 2 — SpecKit: Practical DevOps Controls
 
-> **Turn Specs into CI/CD Using GitHub Actions**
+> **Practical SpecKit DevOps: Turn Specs into CI/CD Controls with GitHub Actions**
 >
-> A hands-on streaming demo showing how agentic AI patterns can automate
-> DevOps workflows — from writing a spec file to a fully generated, running
-> GitHub Actions pipeline.
+> A hands-on streaming demo showing how a small, structured spec artifact
+> can become a first-class input to DevOps automation — so merges and
+> releases are gated by clear, reviewable requirements, not tribal knowledge.
 
 ---
 
 ## 📋 Session Overview
 
-DevOps automation shouldn't stop at scripts and static rules.
-In this episode you'll learn how to apply **agentic AI** to DevOps workflows,
-turning specifications into intelligent CI/CD pipelines using **SpecKit** and
-**GitHub Actions**.
+In many teams, CI/CD only validates code.
+In this episode you will learn how to make the pipeline **validate intent**.
+Using **SpecKit** and **GitHub Actions** you will create a structured spec
+artifact for each change, wire the pipeline to enforce its presence, extract
+risk and breaking-change metadata, generate a summary artifact, and apply
+promotion rules that gate staging and production deployments.
 
 ### You Will Learn
 
-- How agentic patterns apply to modern DevOps scenarios
-- How to turn specs into CI/CD workflows using SpecKit
-- How GitHub Actions can support agent‑driven pipelines
-- Ways to improve delivery speed and reliability with intelligent automation
+- Why specs belong in version control alongside code
+- How to enforce spec presence in CI so PRs without a spec are blocked
+- How to extract risk level and breaking-change metadata from a spec
+- How to generate an auditable summary artifact from a spec
+- How to apply promotion rules that gate deployment to each environment
 
 ### Technologies Used
 
 | Technology | Role |
 |---|---|
-| **SpecKit** | Spec parser, validator, and pipeline generator |
-| **GitHub Actions** | CI/CD runner and agentic workflow host |
+| **SpecKit** | Spec parser, validator, extractor, and pipeline generator |
+| **GitHub Actions** | CI/CD runner and spec-enforcement host |
 | **Node.js 20** | Runtime for the sample app and SpecKit engine |
 | **Express.js** | Sample application API |
 | **js-yaml** | YAML parsing for specs |
@@ -41,7 +44,8 @@ turning specifications into intelligent CI/CD pipelines using **SpecKit** and
 ai-genius-ep2-speckit/
 │
 ├── specs/
-│   └── app.spec.yaml          # 🎯 THE SPEC — change this to change the pipeline
+│   ├── app.spec.yaml          # Application lifecycle spec (runtime, stages)
+│   └── change.spec.yaml       # 🎯 Per-PR change spec — risk, breaking, promotion rules
 │
 ├── src/
 │   ├── app.js                 # Sample Express.js API application
@@ -52,17 +56,20 @@ ai-genius-ep2-speckit/
 │   ├── index.js               # SpecKit CLI entry point
 │   └── lib/
 │       ├── parser.js          # Reads & parses spec YAML files
-│       ├── validator.js       # Validates spec structure & values
-│       └── pipeline-generator.js  # 🧠 Agentic: turns spec into pipeline YAML
+│       ├── validator.js       # Validates app spec structure & values
+│       ├── spec-extractor.js  # 🧠 Extracts risk/breaking metadata, evaluates gates
+│       └── pipeline-generator.js  # Turns app spec into pipeline YAML
 │
 ├── tests/
 │   ├── app.test.js            # Express app tests
-│   └── speckit.test.js        # SpecKit engine tests (32 tests)
+│   └── speckit.test.js        # SpecKit engine tests (57 tests)
 │
 └── .github/
     └── workflows/
         ├── ci.yml                    # Standard CI workflow
-        ├── spec-driven-pipeline.yml  # 🤖 Agentic spec-driven pipeline
+        ├── spec-enforcer.yml         # 🔒 Enforce spec presence on every PR
+        ├── spec-gate.yml             # 🚦 Apply promotion rules from spec
+        ├── spec-driven-pipeline.yml  # Agentic spec-driven pipeline
         └── generate-pipeline.yml     # Auto-generates pipeline when spec changes
 ```
 
@@ -76,147 +83,110 @@ git clone https://github.com/qkfang/ai-genius-ep2-speckit
 cd ai-genius-ep2-speckit
 npm install
 
-# 2. Validate your spec
+# 2. Validate the app spec
 npm run speckit:validate
 
-# 3. Generate a pipeline from the spec
+# 3. Extract metadata from the change spec
+npm run speckit:extract
+
+# 4. Generate a pipeline from the app spec
 npm run speckit:generate
 
-# 4. Run the full SpecKit demo
+# 5. Run the full SpecKit demo
 node speckit/index.js run specs/app.spec.yaml
 
-# 5. Start the sample API
+# 6. Start the sample API
 npm start
 ```
 
 ---
 
-## 🧠 How SpecKit Works — The Agentic Pattern
+## 🧠 How SpecKit Controls Work
 
-SpecKit implements a three-step agentic loop:
+### The Change Spec (`specs/change.spec.yaml`)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SpecKit Agentic Loop                         │
-│                                                                 │
-│   1. PERCEIVE      2. REASON         3. ACT                     │
-│   ───────────      ──────────        ───────                    │
-│   Read spec   →   Validate &    →   Generate pipeline  →       │
-│   YAML file       analyze stages    GitHub Actions YAML         │
-│                                                                 │
-│                    ↑                                            │
-│                    └── Spec changes → loop again                │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Step 1: Define Your Spec (`specs/app.spec.yaml`)
+Every pull request includes a `change.spec.yaml` that declares:
 
 ```yaml
-name: my-app
-runtime: node
-runtimeVersion: "20"
+change:
+  title: "Add user-facing health dashboard"
+  type: feature          # feature | fix | chore | breaking | release
+  risk: low              # low | medium | high
+  breaking: false
 
-stages:
-  - name: Lint
-    type: lint
+  components:
+    - name: api-gateway
+      impact: modified
 
-  - name: Test
-    type: test
-    coverage: true
-    coverageThreshold: 80
-
-  - name: Deploy Staging
-    type: deploy
-    environment: staging
-    strategy: blue-green
+  promotion:
+    require_approvals: 1
+    environments:
+      - staging
+      - production
 ```
 
-### Step 2: SpecKit Reasons Over the Spec
+### Enforcement in GitHub Actions
 
-The **pipeline generator** (`speckit/lib/pipeline-generator.js`) reads each
-stage and decides what GitHub Actions steps to emit:
-
-| Stage type | Inferred steps (Node.js) |
+| Workflow | What it does |
 |---|---|
-| `lint` | `npm run lint` |
-| `build` | `npm ci` + `npm run build` |
-| `test` | `npm test` or `npm run test:coverage` |
-| `security` | `npm audit` + Gitleaks + CodeQL note |
-| `deploy` | Deploy script + health check + rollback |
-| `notify` | Notification step (always runs) |
+| `spec-enforcer.yml` | Blocks the PR if `change.spec.yaml` is missing or invalid |
+| `spec-gate.yml` | Reads the spec, evaluates promotion gates, blocks deploy if needed |
 
-### Step 3: Run or Generate
+### Promotion Gate Logic
 
-```bash
-# Validate the spec
-node speckit/index.js validate specs/app.spec.yaml
-
-# Generate a GitHub Actions workflow YAML
-node speckit/index.js generate specs/app.spec.yaml --output .github/workflows/generated.yml
-
-# Run the full agentic loop with a summary
-node speckit/index.js run specs/app.spec.yaml
-```
+| Condition | Staging | Production |
+|---|---|---|
+| `risk: low`, `breaking: false` | 🟢 Clear | 🟢 Clear |
+| `risk: high` | 🟢 Clear | 🔴 Blocked |
+| `breaking: true` | 🟢 Clear | 🔴 Blocked |
 
 ---
 
 ## 🔄 GitHub Actions Workflows
 
-### 1. `ci.yml` — Standard CI
+### 1. `spec-enforcer.yml` — Enforce Spec Presence ⭐
 
-Runs on every push/PR: lint → build → test with coverage upload.
+Runs on every PR. It:
+1. **Checks** that `specs/change.spec.yaml` exists in the PR branch
+2. **Validates** the spec with SpecKit (schema, required fields)
+3. **Extracts** risk level, breaking flag, and component count
+4. **Posts** a summary comment on the PR so reviewers see intent up front
+5. **Uploads** the summary as an artifact for audit trail
 
-### 2. `spec-driven-pipeline.yml` — Agentic Spec-Driven Pipeline ⭐
+### 2. `spec-gate.yml` — Apply Promotion Rules ⭐
 
-The core demo workflow. It:
+Runs on push/PR. It:
+1. **Reads** `specs/change.spec.yaml` for risk and promotion rules
+2. **Evaluates** promotion gates for staging and production
+3. **Blocks** deployment jobs if the gate fails
+4. **Uploads** a spec gate summary artifact
 
-1. **Reads** `specs/app.spec.yaml`
-2. **Validates** the spec with SpecKit
-3. **Parses outputs** — decides which jobs to run based on spec contents
-4. **Conditionally runs** security, deploy, and notify stages based on spec
+### 3. `ci.yml` — Standard CI
 
-Key agentic features:
-- The `spec-analysis` job outputs facts (has_deploy, has_security) used by other jobs
-- Downstream jobs use `if:` conditions based on spec analysis outputs
-- Triggering with `workflow_dispatch` lets you pass a different spec file
+Runs lint → build → test with coverage upload.
 
-### 3. `generate-pipeline.yml` — Self-Updating Pipeline
+### 4. `spec-driven-pipeline.yml` — Agentic Spec-Driven Pipeline
 
-When `specs/app.spec.yaml` changes, this workflow:
-1. Runs SpecKit to regenerate the pipeline YAML
-2. Opens a pull request with the new workflow
+Reads `specs/app.spec.yaml` and conditionally runs jobs based on spec contents.
 
-This closes the agentic loop: **change the spec → pipeline updates automatically**.
+### 5. `generate-pipeline.yml` — Self-Updating Pipeline
+
+When `specs/app.spec.yaml` changes, regenerates the pipeline and opens a PR.
 
 ---
 
-## 🎯 Demo Walkthrough (1 hour)
+## 🎯 Demo Walkthrough (60 min)
 
-### Part 1 — Introduction (0–10 min)
-- What is agentic DevOps?
-- The SpecKit architecture overview
-- Why specs beat hand-written pipeline YAML
+See [`docs/guide.md`](docs/guide.md) for the full step-by-step presenter guide.
 
-### Part 2 — The Spec File (10–25 min)
-- Tour `specs/app.spec.yaml`
-- Add a new stage (e.g., change `test` to add `coverage: true`)
-- Run `node speckit/index.js validate` and see immediate feedback
-
-### Part 3 — SpecKit Engine (25–40 min)
-- Walk through `speckit/lib/pipeline-generator.js`
-- Show how each stage type maps to GitHub Actions steps
-- Run `node speckit/index.js generate` and inspect the output YAML
-
-### Part 4 — GitHub Actions Integration (40–55 min)
-- Tour `.github/workflows/spec-driven-pipeline.yml`
-- Show the `spec-analysis` job and its outputs
-- Demonstrate conditional jobs (`if: needs.spec-analysis.outputs.has_security == 'true'`)
-- Trigger `workflow_dispatch` with a custom spec file
-
-### Part 5 — Live Demo: Change Spec → Pipeline Adapts (55–60 min)
-- Remove a stage from `app.spec.yaml`
-- Commit and push
-- Watch `generate-pipeline.yml` open a PR with the updated workflow
+| Section | Topic | Clock |
+|---|---|---|
+| Part 1 | End state and why it matters | 0 – 5 min |
+| Part 2 | The change spec artifact | 5 – 15 min |
+| Part 3 | Enforce spec presence in CI | 15 – 25 min |
+| Part 4 | Extract metadata and generate summary | 25 – 40 min |
+| Part 5 | Apply promotion rules | 40 – 55 min |
+| Part 6 | Live demo: full loop | 55 – 60 min |
 
 ---
 
@@ -231,15 +201,13 @@ npm run test:coverage
 
 # Run only SpecKit tests
 npx jest tests/speckit.test.js
-
-# Run only app tests
-npx jest tests/app.test.js
 ```
 
-All 32 tests should pass:
+All 57 tests should pass:
 - **SpecKit Parser** — 6 tests
 - **SpecKit Validator** — 9 tests
 - **SpecKit Pipeline Generator** — 13 tests
+- **SpecKit Spec Extractor** — 25 tests
 - **Express App** — 4 tests
 
 ---
@@ -251,65 +219,50 @@ Usage: speckit [options] [command]
 
 Agentic DevOps: turn specs into CI/CD pipelines
 
-Options:
-  -V, --version              output version number
-  -h, --help                 display help for command
-
 Commands:
-  validate <spec>            Validate a SpecKit spec file
-  generate <spec> [options]  Generate a GitHub Actions workflow from a spec file
-  run <spec>                 Validate and generate a pipeline, printing a full summary
-  help [command]             display help for command
+  validate <spec>              Validate an app spec file
+  generate <spec> [options]    Generate a GitHub Actions workflow from an app spec
+  run <spec>                   Validate and generate a pipeline, printing a full summary
+  extract <spec> [options]     Extract risk/breaking metadata from a change spec
+  help [command]               display help for command
 ```
 
-### `speckit generate` options
+### `speckit extract` options
 
 | Option | Description |
 |---|---|
-| `-o, --output <file>` | Write workflow to this file path |
-| `--dry-run` | Print workflow to stdout without writing to disk |
+| `-o, --output <file>` | Write Markdown summary to this file path |
+| `--env <environment>` | Evaluate the promotion gate for the given environment |
 
 ---
 
-## 📝 Spec File Reference
+## 📝 Change Spec Reference
 
 ```yaml
-# Required fields
-name: string              # Application name
-runtime: node|python|java|go|dotnet
-stages: []                # At least one stage required
+# ── Required ──────────────────────────────────────────────────
+change:
+  title: string               # Change title (required)
+  type: feature|fix|chore|breaking|release   # Required
+  risk: low|medium|high       # Required
+  breaking: true|false        # Required
 
-# Optional fields
-description: string
-version: string
-runtimeVersion: string    # e.g. "20", "3.11", "21"
+# ── Optional ──────────────────────────────────────────────────
+  description: string
 
-pipeline:
-  name: string            # Workflow display name
-  triggers:               # GitHub Actions trigger config (raw 'on:' syntax)
-    push:
-      branches: [main]
-    pull_request:
-      branches: [main]
-    workflow_dispatch:
+  components:
+    - name: string            # Component name (required)
+      impact: new|modified|removed
 
-# Stage fields
-stages:
-  - name: string          # Required — becomes the job ID
-    type: lint|build|test|security|deploy|notify  # Required
-    commands: []          # Optional custom commands
-    coverage: true/false  # (test stage) Enable coverage reporting
-    coverageThreshold: 80 # (test stage) Minimum coverage %
-    scanDependencies: true # (security) Run dependency audit
-    scanSecrets: true      # (security) Run secrets scan
-    codeql: true           # (security) Note about CodeQL
-    environment: staging   # (deploy) REQUIRED for deploy stages
-    strategy: blue-green|canary|direct  # (deploy) Deployment strategy
-    healthCheck: true      # (deploy) Add health check step
-    rollback: true         # (deploy) Add rollback configuration step
-    channel: slack         # (notify) Notification channel name
-    condition: string      # GitHub Actions if: condition
-    needs: []              # Override default sequential ordering
+  promotion:
+    require_approvals: 1
+    require_passing_tests: true
+    require_security_scan: false
+    environments:
+      - staging
+      - production
+
+  refs:
+    - "closes #42"
 ```
 
 ---
@@ -317,6 +270,7 @@ stages:
 ## 🤝 Who Should Attend
 
 - DevOps engineers and platform engineers
-- Developers working with GitHub‑based CI/CD
-- Teams looking to automate from specs to delivery
-- Anyone interested in smarter, AI‑driven DevOps workflows
+- Developers working with GitHub-based CI/CD
+- Teams looking to gate merges and releases on clear, reviewable specs
+- Anyone interested in making CI/CD validate intent, not just code
+
