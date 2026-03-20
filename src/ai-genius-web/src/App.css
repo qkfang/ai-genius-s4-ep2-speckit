@@ -183,7 +183,92 @@
   color: #f87171;
 }
 
-/* ── Footer ────────────────────────────────────────── */
+/* ── SpecKit branding ──────────────────────────────── */
+.speckit-feature {
+  margin: 1.5rem auto 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.speckit-logo-link {
+  display: inline-block;
+  opacity: 0.92;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.speckit-logo-link:hover {
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+.speckit-logo {
+  height: 52px;
+  width: auto;
+  display: block;
+}
+
+.speckit-tagline {
+  color: #7dd3fc !important;
+  font-size: 0.85rem !important;
+  font-style: italic;
+  margin: 0 !important;
+  opacity: 0.85;
+}
+
+/* ── Episode 2 SpecKit highlight ────────────────────── */
+.episode-card--speckit {
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 0 0 1px #0ea5e920, 0 2px 12px #0ea5e918;
+  position: relative;
+}
+
+.speckit-ep-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #0c4a6e;
+  color: #7dd3fc;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  width: fit-content;
+  margin-bottom: 0.15rem;
+}
+
+.speckit-ep-icon {
+  height: 14px;
+  width: auto;
+  display: block;
+}
+
+/* ── Footer SpecKit link ────────────────────────────── */
+.footer-speckit-link {
+  color: #64748b !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+.footer-speckit-link:hover {
+  color: #94a3b8 !important;
+}
+
+.footer-speckit-icon {
+  height: 14px;
+  width: auto;
+  display: inline-block;
+  vertical-align: middle;
+  opacity: 0.75;
+}
+
+
 .app-footer {
   text-align: center;
   padding: 2rem 0 1rem;
