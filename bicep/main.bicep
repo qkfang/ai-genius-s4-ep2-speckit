@@ -10,9 +10,9 @@ param appName string = 'aigenius'
 @description('Azure region for all resources.')
 param location string = resourceGroup().location
 
-@description('Deployment environment tag (development | staging | production).')
-@allowed(['development', 'staging', 'production'])
-param environment string = 'development'
+@description('Deployment environment tag (dev | qa | prod).')
+@allowed(['dev', 'qa', 'prod'])
+param environment string = 'dev'
 
 @description('SKU for the App Service Plan.')
 @allowed(['F1', 'B1', 'B2', 'S1'])
