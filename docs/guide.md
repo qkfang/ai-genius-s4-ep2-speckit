@@ -48,10 +48,6 @@ git --version
 Install `uv` if you don't have it:
 
 ```bash
-# macOS / Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows (PowerShell)
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
@@ -65,27 +61,9 @@ The `specify` CLI scaffolds the spec-kit file structure and installs the `/speck
 slash commands into your AI agent. For GitHub Copilot, this writes prompt files into
 `.github/copilot-instructions.md` and the `.github/` commands directory.
 
-### Option A: Persistent Installation (Recommended)
-
-Install once, use everywhere:
-
-```bash
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-```
-
-Then initialise the project (run from the repo root):
-
 ```bash
 # Initialise spec-kit in the current directory for GitHub Copilot
 specify init . --ai copilot
-```
-
-### Option B: One-time Initialisation
-
-Run directly without a global install:
-
-```bash
-uvx --from git+https://github.com/github/spec-kit.git specify init . --ai copilot
 ```
 
 ### Force PowerShell scripts (Windows)
