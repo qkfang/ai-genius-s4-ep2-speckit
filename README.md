@@ -10,11 +10,12 @@ This repository demonstrates how to use [Spec-Kit](https://github.com/github/spe
 **GitHub Copilot** to design the AI Genius application spec-first, then deploy it to Azure
 using **Bicep** (Infrastructure as Code) and **GitHub Actions** CI/CD.
 
-**What you will do:**
+---
 
-1. Install the `specify` CLI and initialise spec-kit for GitHub Copilot
-2. Use `/speckit.*` slash commands in Copilot Chat to define, clarify, plan, and implement the application
-3. Deploy the Node.js API to **Azure App Service** and the React frontend to **Azure Static Web Apps** via GitHub Actions
+## 📖 Full Guide
+
+See [`docs/guide.md`](docs/guide.md) for the complete step-by-step walkthrough,
+including all `/speckit.*` command examples and the full Azure deployment setup.
 
 ---
 
@@ -69,10 +70,3 @@ npm ci && npm start        # http://localhost:3000
 cd src/aigenius-web
 npm ci && npm run dev      # http://localhost:5173
 ```
-
----
-
-## 📖 Full Guide
-
-See [`docs/guide.md`](docs/guide.md) for the complete step-by-step walkthrough,
-including all `/speckit.*` command examples and the full Azure deployment setup.
