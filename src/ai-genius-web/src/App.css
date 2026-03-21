@@ -7,7 +7,7 @@
 /* ── Header ────────────────────────────────────────── */
 .app-header {
   text-align: center;
-  padding: 3rem 0 2.5rem;
+  padding: 0.5rem 0 0.5rem;
   border-bottom: 1px solid #334155;
   margin-bottom: 2rem;
 }
@@ -38,7 +38,7 @@
   color: #94a3b8;
   font-size: 1.05rem;
   max-width: 600px;
-  margin: 0 auto 1.25rem;
+  margin: 0 auto 0.5rem;
   line-height: 1.6;
 }
 
