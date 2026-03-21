@@ -15,58 +15,36 @@ on:
           - qa
           - prod
 
-permissions:
-  id-token: write   # required for OIDC login
-  contents: read
-
 env:
-  ENVIRONMENT: ${{ github.event.inputs.environment || 'prod' }}
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+  AZURE_RESOURCE_GROUP: rg-aigenius-${{ github.event.inputs.environment || 'dev' }}
+  AZURE_LOCATION: eastus2
+  APP_NAME: aigenius
 
 jobs:
   infra:
-    name: Provision Infrastructure (Bicep)
+    name: Deploy Bicep
     runs-on: ubuntu-latest
-    outputs:
-      nodeAppName: ${{ steps.bicep.outputs.nodeAppName }}
-      staticWebAppToken: ${{ steps.bicep.outputs.staticWebAppToken }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Azure Login (OIDC)
-        uses: azure/login@v2
+      - name: Azure Login
+        uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Create resource group if it does not exist
-        run: |
-          az group create \
-            --name ${{ vars.AZURE_RESOURCE_GROUP }} \
-            --location ${{ vars.AZURE_LOCATION || 'eastus' }} \
-            --output none
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy Bicep template
-        id: bicep
         run: |
-          OUTPUT=$(az deployment group create \
-            --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} \
+          az group create \
+            --name ${{ env.AZURE_RESOURCE_GROUP }} \
+            --location ${{ env.AZURE_LOCATION }} \
+            --output none
+
+          az deployment group create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
             --template-file bicep/main.bicep \
+            --parameters bicep/main.parameters.json \
             --parameters \
-                appName=${{ vars.APP_NAME || 'aigenius' }} \
-                environment=${{ env.ENVIRONMENT }} \
-            --query properties.outputs \
-            --output json)
-
-          NODE_APP_NAME="${{ vars.APP_NAME || 'aigenius' }}-nodeapp-${{ env.ENVIRONMENT }}"
-          STATIC_TOKEN=$(echo "$OUTPUT" | jq -r '.staticWebAppToken.value // empty')
-
-          echo "nodeAppName=${NODE_APP_NAME}" >> "$GITHUB_OUTPUT"
-          echo "staticWebAppToken=${STATIC_TOKEN}" >> "$GITHUB_OUTPUT"
-
-          echo "### Bicep Outputs" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Key | Value |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-----|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Static Web App URL | $(echo "$OUTPUT" | jq -r '.staticWebAppUrl.value') |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Node App Hostname | $(echo "$OUTPUT" | jq -r '.nodeAppHostname.value') |" >> "$GITHUB_STEP_SUMMARY"
+                appName=${{ env.APP_NAME }} \
+                environment=${{ env.ENVIRONMENT }}
