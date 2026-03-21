@@ -1,4 +1,6 @@
-# AI Genius Season 4 Episode 2 — Spec-Kit with GitHub Copilot
+# AI Genius: Season 4 Episode 2 
+
+## Spec-Kit with GitHub Copilot
 
 > **Spec-Driven Development with GitHub Copilot, then deploy to Azure using Bicep and GitHub Actions.**
 

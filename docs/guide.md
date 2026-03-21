@@ -1,4 +1,6 @@
-# AI Genius Season 4 Episode 2 — Spec-Kit with GitHub Copilot
+# AI Genius: Season 4 Episode 2 
+
+## Spec-Kit with GitHub Copilot
 
 > **Hands-On Session: Spec-Driven Development using Spec-Kit and GitHub Copilot**
 >
