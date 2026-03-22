@@ -80,7 +80,7 @@ function App() {
           <a href="https://react.dev" target="_blank" rel="noreferrer">React</a>
           {' '}+{' '}
           <a href="https://dotnet.microsoft.com" target="_blank" rel="noreferrer">.NET</a>
-          {' '}· Episode 2 —{' '}
+          {' '}· Season 6 - Episode 2 —{' '}
           <a href="https://github.com/github/spec-kit" target="_blank" rel="noreferrer" className="footer-speckit-link">
             <img src="/speckit-logo-small.webp" alt="" className="footer-speckit-icon" />
             SpecKit

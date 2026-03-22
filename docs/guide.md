@@ -167,12 +167,6 @@ Steps: checkout → azure login (OIDC) → create resource group → az deployme
 
 ### 2.3 — Push and Verify Infrastructure
 
-```bash
-git add .
-git commit -m "feat: add Bicep infrastructure CI/CD workflow"
-git push origin main
-```
-
 Verify in the **Actions** tab that the infrastructure workflow completes successfully.
 
 ### 2.4 — Bicep Parameters Reference
