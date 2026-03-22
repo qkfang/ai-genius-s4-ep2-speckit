@@ -49,6 +49,8 @@ Install `uv` if you don't have it:
 
 ```bash
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v0.3.2
 ```
 
 ---
@@ -64,11 +66,7 @@ slash commands into your AI agent. For GitHub Copilot, this writes prompt files 
 ```bash
 # Initialise spec-kit in the current directory for GitHub Copilot
 specify init . --ai copilot
-```
 
-### Force PowerShell scripts (Windows)
-
-```bash
 specify init . --ai copilot --script ps
 ```
 
