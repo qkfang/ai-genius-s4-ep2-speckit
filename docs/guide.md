@@ -145,7 +145,7 @@ The Bicep templates already exist in bicep/main.bicep and bicep/modules/.
 /speckit.clarify The Bicep modules are:
   - bicep/modules/webapp.bicep: App Service Plan + Web App
   - bicep/modules/staticwebapp.bicep: Static Web App
-Parameters: appName (default: aigenius), environment (development/staging/production),
+Parameters: appName (default: aigenius), environment (dev/qa/prod),
 appServicePlanSku (default: B1), staticWebAppSku (default: Free).
 The infra workflow runs before deploy-api and deploy-web. Use workflow outputs
 or GitHub variables to pass resource names between workflows.
@@ -155,8 +155,6 @@ or GitHub variables to pass resource names between workflows.
 /speckit.plan
 Workflow: .github/workflows/deploy-infra.yml
 Steps: checkout → azure login (OIDC) → create resource group → az deployment group create
-Outputs: nodeAppName, staticWebAppToken
-Downstream workflows (deploy-api, deploy-web) consume these outputs.
 ```
 
 ```
@@ -183,7 +181,7 @@ Verify in the **Actions** tab that the infrastructure workflow completes success
 |-----------|---------|-------------|
 | `appName` | `aigenius` | Base name for all Azure resources |
 | `location` | resource group location | Azure region |
-| `environment` | `development` | `development`, `staging`, or `production` |
+| `environment` | `development` | `dev`, `qa`, or `prod` |
 | `appServicePlanSku` | `B1` | App Service Plan SKU (`F1`, `B1`, `B2`, `S1`) |
 | `staticWebAppSku` | `Free` | Static Web App tier (`Free` or `Standard`) |
 
@@ -528,9 +526,9 @@ Update the GitHub Actions workflows to include:
 2. Branch protection on main: require PR, require passing CI checks,
    require code review before merge.
 3. GitHub environment protection rules:
-   - development: auto-deploy (no gates)
-   - staging: 1 required reviewer
-   - production: 2 required reviewers + 5-minute wait timer
+   - dev: auto-deploy (no gates)
+   - qa: 1 required reviewer
+   - prod: 2 required reviewers + 5-minute wait timer
 4. Update deploy-web.yml and deploy-api.yml to reference the production
    environment so deployment pauses for approval.
 All gates must be enforced — no bypassing allowed.
@@ -553,7 +551,7 @@ an environment: production key to trigger the approval gate.
 CI workflow: .github/workflows/ci.yml
 Trigger: pull_request to main
 Steps: checkout → build frontend → build & test API
-Environments: development (no gate), staging (1 reviewer), production (2 reviewers + wait)
+Environments: dev (no gate), qa (1 reviewer), prod (2 reviewers + wait)
 Deploy workflows: add environment: production to deploy jobs.
 Branch protection: require PR, require status checks, require review.
 ```
