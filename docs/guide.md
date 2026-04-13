@@ -267,10 +267,11 @@ cat specs/002-frontend-deploy/spec.md
 cat specs/002-frontend-deploy/checklists/requirements.md
 ```
 
-Create feature branch to work on the task
+Create feature branch to work on the task by running below. Check the new feature branch.
 
 ```bash
 /speckit.git.feature
+/speckit.git.commit
 ```
 
 ---
@@ -409,29 +410,21 @@ Address any inconsistencies reported before proceeding.
 
 ### 3.7 - Implement
 
-**In GitHub Copilot Chat**, use `/speckit.implement` to execute the task list and
-build the frontend deployment workflow.
+**In GitHub Copilot Chat**, switch to `Cloud` mode, then use `/speckit.implement` to execute the task list and build the frontend deployment workflow on the cloud.
 
 ```
 /speckit.implement
 ```
 
 Copilot will generate the `.github/workflows/deploy-web.yml` workflow file and any
-supporting configuration. After implementation, verify locally:
-
-```bash
-# Build the frontend to confirm it succeeds
-cd src/ai-genius-web
-npm ci
-npm run build    # Output in dist/
-```
-
-Commit the generated workflow and any related changes:
+supporting configuration. Commit the generated workflow and any related changes:
 
 ```bash
 git add .
 git commit -m "feat: add frontend deployment workflow"
 ```
+
+Go to GitHub to check newly created action inside `Actions` tab and verify the deployment status.
 
 ---
 
