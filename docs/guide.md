@@ -444,7 +444,7 @@ Go to GitHub to check newly created action inside `Actions` tab and verify the d
 With the frontend deployment workflow implemented, push to GitHub and run the
 pipeline end-to-end to confirm everything works.
 
-#### Configure GitHub Secrets
+#### Configure GitHub Secrets & Copilot Configure
 
 Before the workflow can authenticate to Azure, set up the required secrets in your
 GitHub repository under **Settings → Secrets and variables → Actions**:
@@ -491,13 +491,18 @@ If any step fails, check the workflow logs for errors and fix before proceeding.
 
 > **Agenda:** Speed run to create a spec for backend API deployment in the same way as the frontend.
 
-Use the Spec-Kit **speed workflow** to create a spec for deploying the backend API.
+Use the Spec-Kit to create a spec for deploying the backend API.
 The speed workflow runs all spec-kit commands in rapid succession -
 specify → clarify → plan → tasks → implement.
 
-### 4.1 - Create the Backend Deployment Spec
+### 4.1 - Create the Backend Deployment 
+
+Use `Autopilot` to implement the action end to end. Invoke this action in a sepearate VS Code IDE and locally, don't create a branch so that it is isolated.
 
 ```
+Please run below steps one by one, and provide response automatically.
+
+Step 1: 
 /speckit.specify Deploy the AI Genius backend API via GitHub Actions.
 The backend is a .NET API in src/ai-genius-api.
 Create a GitHub Actions workflow (.github/workflows/deploy-api.yml) that:
@@ -507,58 +512,32 @@ Create a GitHub Actions workflow (.github/workflows/deploy-api.yml) that:
 4. Uses OIDC (Workload Identity Federation) for authentication.
 The App Service must enforce HTTPS only. The workflow must produce a green
 check and the /health endpoint must return { "status": "ok" }.
-```
 
-### 4.2 - Speed-Run: Clarify, Plan, Tasks
 
-Run each command in quick succession without pausing:
-
-```
+Step 2:
 /speckit.clarify The API runs on .NET 8+. The App Service Plan uses Linux B1.
 Zip deploy is used. Required secrets: AZURE_CLIENT_ID, AZURE_TENANT_ID,
 AZURE_SUBSCRIPTION_ID. The App Service name is output from Bicep or configured
 as a GitHub variable APP_SERVICE_NAME.
-```
 
-```
+Step 3:
 /speckit.plan
 Workflow: .github/workflows/deploy-api.yml
 Steps: checkout → setup-dotnet → dotnet publish → zip artifact → azure/webapps-deploy@v3
 Authentication: OIDC with id-token: write permission.
-```
 
-```
+Step 4:
 /speckit.tasks
-```
 
-### 4.3 - Implement and Deploy
-
-```
+Step 5:
 /speckit.implement
 ```
 
-After implementation, push and verify:
 
-```bash
-git add .
-git commit -m "feat: add backend API deployment workflow"
-git push origin main
-```
+### 4.2 - Review `Autopilot` logs
 
-Monitor the **Actions** tab. Once the workflow completes:
+Check the subagent logs and review responses. We can check the progress during the wait time of earlier demo steps.
 
-```bash
-# Verify the deployed API
-curl https://YOUR_APP_SERVICE.azurewebsites.net/health
-# Expected: { "status": "ok" }
-```
-
-```
-Expected:
-✅ deploy-api.yml workflow completes green
-✅ API is reachable at the App Service URL
-✅ /health returns { "status": "ok" }
-```
 
 ---
 
