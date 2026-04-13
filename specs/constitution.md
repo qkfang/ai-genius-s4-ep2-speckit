@@ -9,7 +9,7 @@ implementation decision made in this repository.
 
 This project is the **AI Genius demo application**, consisting of:
 
-- **`src/ai-genius-api`** — .NET minimal API backend
+- **`src/ai-genius-api`** — Node.js Express API backend
 - **`src/ai-genius-web`** — React (Vite) frontend
 - **`bicep/`** — Azure Bicep infrastructure-as-code
 

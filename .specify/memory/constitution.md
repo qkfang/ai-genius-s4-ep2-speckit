@@ -1,31 +1,26 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template) → 1.0.0
-Initial ratification — constitution filled from blank template.
+Version change: 1.0.0 → 1.0.1
+Patch — Technology Stack table corrected: API backend
+updated from ".NET 9 Minimal API" to "Node.js Express".
+No principles were added, removed, or redefined.
 
-Modified principles:
-  [PRINCIPLE_1_NAME] → I. Security-First
-  [PRINCIPLE_2_NAME] → II. Cloud-Native
-  [PRINCIPLE_3_NAME] → III. CI/CD-Driven
-  [PRINCIPLE_4_NAME] → IV. Simplicity
-  [PRINCIPLE_5_NAME] → V. Tested
+Modified principles: none
 
-Added sections:
-  - Technology Stack (replaces generic [SECTION_2_NAME])
-  - Development Workflow (replaces generic [SECTION_3_NAME])
+Added sections: none
 
 Removed sections: none
 
 Templates reviewed:
   ✅ .specify/templates/plan-template.md
-     — Constitution Check gate present; dynamically reads this file. No update needed.
+     — Constitution Check gate dynamically reads this file. No update needed.
   ✅ .specify/templates/spec-template.md
-     — Generic; no principle-specific markers. No update needed.
+     — Generic; no principle-specific or stack-specific markers. No update needed.
   ✅ .specify/templates/tasks-template.md
-     — Generic task structure; no principle-specific markers. No update needed.
+     — Generic task structure; no stack-specific markers. No update needed.
   ✅ .github/prompts/*.prompt.md
-     — All are minimal frontmatter stubs; no CLAUDE-only or outdated references found.
+     — Minimal frontmatter stubs; no outdated stack references found.
 
 Deferred TODOs: none
 -->
@@ -91,7 +86,7 @@ principles; without them, compliance is unverifiable.
 
 | Layer | Technology |
 |---|---|
-| API backend | .NET 9 Minimal API (`src/ai-genius-api/`) |
+| API backend | Node.js Express (`src/ai-genius-api/`) |
 | Frontend | React 18 + Vite (`src/ai-genius-web/`) |
 | Infrastructure as Code | Azure Bicep (`bicep/`) |
 | CI/CD | GitHub Actions (`.github/workflows/`) |
@@ -135,4 +130,4 @@ versioning. The PR requires at least one approving review before merge.
 **Compliance review**: Adherence to this constitution MUST be verified at each
 PR review and during `/speckit.plan` Constitution Check gates.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-03-22
+**Version**: 1.0.1 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-04-13
