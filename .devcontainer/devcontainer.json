@@ -16,7 +16,7 @@
         }
 	},
 	"waitFor": "onCreateCommand",
-	"postCreateCommand": "curl -sL https://aka.ms/InstallAzureCLIDeb",
+	"postCreateCommand": "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash",
 	"customizations": {
 	  "codespaces": {
 		"openFiles": []
