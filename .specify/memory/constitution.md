@@ -1,20 +1,25 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template) → 1.0.0
-Initial ratification — constitution filled from blank template.
+Version change: 1.0.0 → 1.0.1
+Amendment: Wording clarification across all five principles; Tested principle now
+explicitly states unit tests as the minimum requirement (integration tests also
+satisfy the gate). Last amended date updated to 2026-04-13.
+
+NOTE: Constitution arguments described "Node.js Express API backend" — this does
+not match the actual workspace (src/ai-genius-api is .NET 9 Minimal API). The
+Technology Stack section retains the accurate .NET entry. If a migration to
+Node.js/Express is planned, update the Technology Stack in a dedicated amendment.
 
 Modified principles:
-  [PRINCIPLE_1_NAME] → I. Security-First
-  [PRINCIPLE_2_NAME] → II. Cloud-Native
-  [PRINCIPLE_3_NAME] → III. CI/CD-Driven
-  [PRINCIPLE_4_NAME] → IV. Simplicity
-  [PRINCIPLE_5_NAME] → V. Tested
+  I.   Security-First     — no structural change; wording tightened
+  II.  Cloud-Native       — no structural change; wording tightened
+  III. CI/CD-Driven       — no structural change; wording tightened
+  IV.  Simplicity         — no structural change; wording tightened
+  V.   Tested             — clarified: unit tests are the minimum; integration tests
+                            also satisfy the gate
 
-Added sections:
-  - Technology Stack (replaces generic [SECTION_2_NAME])
-  - Development Workflow (replaces generic [SECTION_3_NAME])
-
+Added sections: none
 Removed sections: none
 
 Templates reviewed:
@@ -25,7 +30,7 @@ Templates reviewed:
   ✅ .specify/templates/tasks-template.md
      — Generic task structure; no principle-specific markers. No update needed.
   ✅ .github/prompts/*.prompt.md
-     — All are minimal frontmatter stubs; no CLAUDE-only or outdated references found.
+     — All are minimal frontmatter stubs; no outdated references found.
 
 Deferred TODOs: none
 -->
@@ -37,7 +42,8 @@ Deferred TODOs: none
 ### I. Security-First
 
 All user inputs MUST be validated at the API boundary before processing.
-HTTPS is required for all production endpoints; plain-HTTP MUST NOT be exposed.
+HTTPS is required for all production endpoints; plain-HTTP MUST NOT be exposed
+in any environment other than local development.
 No credentials, tokens, API keys, or other secrets may be committed to source
 code. All sensitive values MUST be stored in GitHub Secrets or Azure Key Vault
 and injected at runtime.
@@ -80,9 +86,10 @@ friction, and the surface area for defects.
 
 ### V. Tested
 
-Every API route MUST be covered by at least one automated unit or integration
-test. The frontend MUST build cleanly (`npm run build` with zero errors) on
-every CI run. Test failures MUST block merge to `main`.
+Every API route MUST be covered by at least one automated unit test; integration
+tests are also acceptable and encouraged where unit tests alone cannot verify
+correctness. The frontend MUST build cleanly (`npm run build` with zero errors)
+on every CI run. Test failures MUST block merge to `main`.
 
 **Rationale**: Automated tests are the enforcement mechanism for all other
 principles; without them, compliance is unverifiable.
@@ -135,4 +142,4 @@ versioning. The PR requires at least one approving review before merge.
 **Compliance review**: Adherence to this constitution MUST be verified at each
 PR review and during `/speckit.plan` Constitution Check gates.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-03-22
+**Version**: 1.0.1 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-04-13

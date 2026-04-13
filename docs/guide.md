@@ -267,10 +267,11 @@ cat specs/002-frontend-deploy/spec.md
 cat specs/002-frontend-deploy/checklists/requirements.md
 ```
 
-Create feature branch to work on the task
+Create feature branch to work on the task by running below. Check the new feature branch.
 
 ```bash
 /speckit.git.feature
+/speckit.git.commit
 ```
 
 ---
