@@ -133,6 +133,8 @@ After initialisation, Copilot gains these slash commands in its context:
 principles for this project. The constitution is committed to `specs/constitution.md` and
 guides every subsequent specification and implementation decision.
 
+Selected `Claude Sonnect 4.5` model.
+
 ```
 /speckit.constitution This project is the AI Genius demo application.
 It consists of a Node.js Express API backend and a React frontend.
@@ -237,8 +239,15 @@ appServicePlanSku (default: B1), staticWebAppSku (default: Free).
 **In GitHub Copilot Chat**, use `/speckit.specify` to describe what you want to build.
 Focus on the **what** and **why** - not the tech stack.
 
-This first spec focuses on deploying the **React frontend web app** to Azure
-Static Web Apps using a GitHub Actions workflow.
+This first spec focuses on deploying the **React frontend web app** to Azure Static Web Apps using a GitHub Actions workflow.
+
+Create feature branch to work on the task by running below. Check the new feature branch.
+
+```bash
+/speckit.git.feature frontend-ci-cd
+
+/speckit.git.commit (for commit changes to branch)
+```
 
 Spec-Kit will:
 1. Automatically determine the next feature number (e.g., `001`)
@@ -267,12 +276,6 @@ cat specs/002-frontend-deploy/spec.md
 cat specs/002-frontend-deploy/checklists/requirements.md
 ```
 
-Create feature branch to work on the task by running below. Check the new feature branch.
-
-```bash
-/speckit.git.feature
-/speckit.git.commit
-```
 
 ---
 
@@ -364,6 +367,10 @@ Spec-Kit generates into `specs/002-frontend-deploy/`:
 | `research.md` | Library choices and rationale |
 | `quickstart.md` | Key validation scenarios |
 
+The progress will take a long time. while waiting, let's explore the models, prompts, mcp for the GitHub Copilot inside VS Code. (talk about 5 minutes). 
+
+Create a custom agent if needed to pass time.
+
 ---
 
 ### 3.5 - Generate Tasks
@@ -406,6 +413,8 @@ Copilot will check:
 
 Address any inconsistencies reported before proceeding.
 
+It will take 3-4 minutes, while waiting, show `GitHub Copilot Cli` and demostration the features.
+
 ---
 
 ### 3.7 - Implement
@@ -413,8 +422,10 @@ Address any inconsistencies reported before proceeding.
 **In GitHub Copilot Chat**, switch to `Cloud` mode, then use `/speckit.implement` to execute the task list and build the frontend deployment workflow on the cloud.
 
 ```
-/speckit.implement
+/speckit.implement 002-front-end-cicd spec
 ```
+
+Go to the agent session on GitHub.com: `https://github.com/qkfang/ai-genius-s4-ep2-speckit/agents` and check the progress.
 
 Copilot will generate the `.github/workflows/deploy-web.yml` workflow file and any
 supporting configuration. Commit the generated workflow and any related changes:
