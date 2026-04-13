@@ -85,7 +85,7 @@ Install `uv` if you don't have it:
 ```bash
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v0.3.2
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v0.6.1
 ```
 
 ---
