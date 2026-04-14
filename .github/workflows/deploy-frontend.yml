@@ -1,0 +1,105 @@
+name: Deploy Frontend to Azure Static Web Apps
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  FRONTEND_DIR: src/ai-genius-web
+  BUILD_OUTPUT: src/ai-genius-web/dist
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  AZURE_STATIC_WEB_APP_NAME: ${{ vars.AZURE_STATIC_WEB_APP_NAME }}
+  AZURE_STATIC_WEB_APP_URL: ${{ vars.AZURE_STATIC_WEB_APP_URL }}
+
+jobs:
+  deploy:
+    name: Build and Deploy Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: src/ai-genius-web/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+        working-directory: ${{ env.FRONTEND_DIR }}
+
+      - name: Build frontend
+        run: |
+          set -euo pipefail
+          npm run build
+        working-directory: ${{ env.FRONTEND_DIR }}
+
+      - name: Verify build artifact
+        run: |
+          set -euo pipefail
+          test -d "${BUILD_OUTPUT}"
+          test -n "$(find "${BUILD_OUTPUT}" -mindepth 1 -print -quit)"
+
+      - name: Validate Azure configuration
+        run: |
+          set -euo pipefail
+          for name in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_RESOURCE_GROUP AZURE_STATIC_WEB_APP_NAME AZURE_STATIC_WEB_APP_URL; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required repository variable: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Static Web Apps (OIDC-only)
+        run: |
+          set -euo pipefail
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az extension add --name staticwebapp --upgrade
+          az staticwebapp upload \
+            --name "${AZURE_STATIC_WEB_APP_NAME}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --source "${BUILD_OUTPUT}"
+
+      - name: Verify public site URL is reachable
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --retry 5 --retry-delay 5 "${AZURE_STATIC_WEB_APP_URL}" >/dev/null
+
+      - name: Publish successful deployment summary
+        if: success()
+        run: |
+          set -euo pipefail
+          {
+            echo "## ✅ Frontend deployment succeeded"
+            echo "- Site URL: ${AZURE_STATIC_WEB_APP_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish failure summary
+        if: failure()
+        run: |
+          set -euo pipefail
+          {
+            echo "## ❌ Frontend deployment failed"
+            echo "- Check the failed step logs above for details."
+          } >> "$GITHUB_STEP_SUMMARY"
