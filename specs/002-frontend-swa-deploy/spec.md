@@ -1,3 +1,10 @@
+---
+feature: 002-frontend-swa-deploy
+risk: low
+breaking: false
+reviewer-team: spec-reviewer
+---
+
 # Feature Specification: Frontend Static Web App Deployment via CI/CD
 
 **Feature Branch**: `002-frontend-swa-deploy`  
@@ -60,7 +67,8 @@ An operations team member reviews the repository and CI/CD configuration. They c
 - What happens when the build step succeeds but the deployment step fails? The pipeline must report failure and the previous version of the site remains accessible.
 - What happens when the federated identity credentials are expired or misconfigured? The pipeline fails with a descriptive authentication error, no partial deployment occurs.
 - What happens when dependencies cannot be installed (e.g., registry unavailable)? The pipeline fails at the install step before any build or deployment is attempted.
-- What happens when the deployment is already in progress and a second push arrives? The second run queues or cancels the first, ensuring the latest code is eventually deployed.
+- What happens when the deployment is already in progress and a second push arrives? The in-progress deployment is cancelled and the newer deployment begins immediately, ensuring the live site always reflects the most recent commit without queuing delay.
+- What happens when a required build-time environment variable is absent or misconfigured? The build step must fail with a descriptive error before any artifact is produced; no partial or misconfigured build is deployed.
 
 ## Requirements *(mandatory)*
 
@@ -70,11 +78,13 @@ An operations team member reviews the repository and CI/CD configuration. They c
 - **FR-002**: The pipeline MUST install all declared frontend dependencies from the package manifest before building.
 - **FR-003**: The pipeline MUST produce a production-optimised build artifact from the frontend source code.
 - **FR-004**: The pipeline MUST deploy the build artifact to the Azure Static Web Apps hosting environment.
-- **FR-005**: The pipeline MUST authenticate with the cloud provider using short-lived, federated identity credentials — no long-lived secrets or API keys may be stored in the repository.
+- **FR-005**: The pipeline MUST authenticate with the cloud provider using short-lived, federated identity credentials. Non-secret identity reference values (such as client ID, tenant ID, and subscription ID) MAY be stored as repository variables or secrets. Long-lived authenticating credentials (passwords, API keys, SAS tokens, service principal secrets) MUST NOT be stored in the repository.
 - **FR-006**: The pipeline MUST report a passing status check on the repository commit and Actions tab after a successful deployment.
 - **FR-007**: The pipeline MUST report a failed status check and stop all subsequent steps if any step (install, build, or deploy) fails.
-- **FR-008**: The deployed site MUST be reachable at the Static Web App URL within a reasonable time after the pipeline completes successfully.
+- **FR-008**: The deployed site MUST be reachable at the Static Web App URL within 3 minutes of a successful pipeline completion.
 - **FR-009**: A previously deployed version of the site MUST remain accessible while a new deployment is in progress or if a new deployment fails.
+- **FR-010**: The pipeline MUST inject all required build-time environment variables (e.g. frontend API configuration such as `VITE_API_URL`) from repository-level variables or secrets before executing the build step.
+- **FR-011**: The federated identity's cloud RBAC permissions MUST be scoped to the minimum necessary — restricted to the specific Static Web App resource only; subscription-level or resource-group-level role assignments are not permitted.
 
 ### Key Entities
 
@@ -88,15 +98,27 @@ An operations team member reviews the repository and CI/CD configuration. They c
 ### Measurable Outcomes
 
 - **SC-001**: Every push to the main branch triggers the pipeline automatically and completes with a green status check within 5 minutes under normal conditions.
-- **SC-002**: The deployed site is reachable at the Static Web App URL within 3 minutes of a successful pipeline completion.
+- **SC-002**: Verified by navigating to the Static Web App URL immediately after the pipeline completes — the site loads and reflects the latest commit content within 3 minutes.
 - **SC-003**: Zero long-lived cloud credentials are stored in the repository — authentication relies entirely on federated identity tokens issued at runtime.
 - **SC-004**: A build failure prevents deployment 100% of the time — no broken build artifact is ever deployed to the live environment.
-- **SC-005**: The live site remains accessible during active deployments; end users experience no downtime caused by the deployment process itself.
+- **SC-005**: Verified by loading the SWA URL while a deployment is actively in progress — the previously deployed version serves without error until the new deployment atomically replaces it.
 
 ## Assumptions
 
+- The workflow deploys to a **single production** Static Web App (Standard tier). A separate dev environment (Free tier) exists for manual experimentation and is not managed by this CI/CD workflow.
 - The Azure Static Web App resource already exists (or will be provisioned separately) and its resource identifier is available for the workflow configuration.
 - The federated identity trust relationship between the repository and the cloud provider will be set up prior to first use of the workflow.
-- The frontend build command (`npm run build`) produces a self-contained static output in the `dist/` directory.
+- The frontend build command (`npm run build`) produces static output in the `dist/` directory; required build-time environment variables (e.g. `VITE_API_URL`) will be available as repository-level variables or secrets before the workflow is first used.
 - The Node.js version required by the project (≥18) is available in the CI/CD runner environment.
-- Only pushes to the `main` branch trigger deployment; other branches do not deploy to the production Static Web App.
+- Only pushes to the `main` branch trigger deployment; other branches do not deploy to the production Static Web App. PR preview deployments are explicitly out of scope for this feature.
+
+## Clarifications
+
+### Session 2026-05-16
+
+- Q: Does the frontend build require build-time configuration injected as environment variables during CI? → A: Yes — one or more variables (e.g. `VITE_API_URL`) must be injected from repository secrets/variables before the build step.
+- Q: When multiple commits arrive in quick succession, should an in-progress deployment be cancelled or queued? → A: Cancel in-progress — only the latest commit's deployment runs; stale in-progress runs are cancelled immediately.
+- Q: Should PR branches trigger preview deployments to a staging URL in addition to main branch deploys? → A: No — the workflow is scoped exclusively to the main branch; PR preview deployments are out of scope.
+- Q: Does the workflow deploy to a single environment or multiple (dev + production) environments? → A: Single production SWA (Standard tier) only — a separate Free-tier dev environment exists but is manually managed and outside this workflow's scope.
+- Q: Should FR-005 distinguish non-secret identity references (client/tenant/subscription IDs) from long-lived credentials? → A: Yes — identity reference values MAY be stored as repository variables; long-lived authenticating credentials (passwords, keys, SAS tokens) MUST NOT.
+- Q: Should the federated identity's Azure RBAC permissions be scoped to the specific SWA resource or at a broader level? → A: Least-privilege — RBAC role assignment MUST be scoped to the specific Static Web App resource only.

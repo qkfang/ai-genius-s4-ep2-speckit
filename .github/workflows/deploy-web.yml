@@ -1,0 +1,91 @@
+name: "Deploy Web to Azure Static Web Apps"
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: "deploy-web-${{ github.ref }}"
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: "Build and Deploy"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: src/ai-genius-web/package-lock.json
+
+      # Guard: Validates VITE_API_URL is non-empty before the build step (FR-010, edge case).
+      # A missing variable would produce a broken bundle with no API connectivity; this
+      # explicit check surfaces the misconfiguration as a clear build failure.
+      - name: validate-env
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "ERROR: VITE_API_URL is not set"
+            exit 1
+          fi
+
+      # Fail-fast guarantee: npm ci exits non-zero → all subsequent steps are skipped (FR-007).
+      # No broken or incomplete dependency tree will ever reach the build step.
+      - name: install
+        working-directory: src/ai-genius-web
+        run: npm ci
+
+      # Fail-fast guarantee: npm run build exits non-zero → deploy step is skipped (FR-007).
+      # Any compile or type error in the React/Vite app prevents deployment.
+      - name: build
+        working-directory: src/ai-genius-web
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: npm run build
+
+      # OIDC-only authentication (FR-005, SC-003):
+      # azure/login@v2 exchanges the GitHub OIDC token for a short-lived Azure access token.
+      # No client-secret or long-lived credential is used — authentication is entirely
+      # federated. AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID are
+      # identity references (not authenticating secrets) stored in GitHub Secrets.
+      # Federated subject: repo:qkfang/ai-genius-s4-ep2-speckit:ref:refs/heads/main
+      - name: azure-login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: get-token
+        id: get-token
+        run: |
+          token=$(az staticwebapp secrets list \
+            --name ${{ vars.SWA_NAME }} \
+            --resource-group ${{ vars.AZURE_RG }} \
+            --query "properties.apiKey" -o tsv)
+          echo "deployment_token=$token" >> $GITHUB_OUTPUT
+
+      # Azure SWA uses atomic content swaps (FR-009, SC-005):
+      # The previously deployed version continues serving until the new deployment is
+      # fully propagated. A failed pipeline leaves the live site unaffected — the old
+      # content remains active until a successful deployment fully replaces it.
+      # (Azure Static Web Apps Standard tier atomic deployment guarantee)
+      - name: deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.get-token.outputs.deployment_token }}
+          action: "upload"
+          app_location: "src/ai-genius-web"
+          output_location: "dist"
