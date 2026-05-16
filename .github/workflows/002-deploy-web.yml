@@ -1,4 +1,4 @@
-name: 002 Deploy Web to Azure
+name: 002 Deploy Web to Static Web App
 
 on:
   push:
@@ -10,21 +10,25 @@ on:
         required: true
         default: "dev"
         type: choice
-        options: [dev, qa, prod]
+        options:
+          - dev
+          - qa
+          - prod
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Build and Deploy Frontend
+  build_and_deploy_web:
+    name: Build and Deploy Web
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'dev' }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
@@ -34,17 +38,20 @@ jobs:
         working-directory: src/ai-genius-web
         run: npm ci
 
-      - name: Build frontend
+      - name: Create .env file
         working-directory: src/ai-genius-web
+        run: |
+          cp .env.example .env
+          sed -i 's|^VITE_API_URL=.*|VITE_API_URL=${{ vars.VITE_API_URL }}|' .env
+
+      - name: Build
+        working-directory: src/ai-genius-web
+        run: npm run build
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
-        run: npm run build
 
-      - uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - uses: Azure/static-web-apps-deploy@v1
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
         with:
           action: upload
           app_location: src/ai-genius-web/dist
