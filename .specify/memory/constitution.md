@@ -1,21 +1,18 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template) → 1.0.0
-Initial ratification — constitution filled from blank template.
+Version change: 1.0.0 → 2.0.0
+
+Bump rationale: MAJOR — Principle V "Tested" removed and replaced with "Demo Session";
+this is a backward-incompatible redefinition removing mandatory test gates.
 
 Modified principles:
-  [PRINCIPLE_1_NAME] → I. Security-First
-  [PRINCIPLE_2_NAME] → II. Cloud-Native
-  [PRINCIPLE_3_NAME] → III. CI/CD-Driven
-  [PRINCIPLE_4_NAME] → IV. Simplicity
-  [PRINCIPLE_5_NAME] → V. Tested
+  V. Tested → V. Demo Session
 
-Added sections:
-  - Technology Stack (replaces generic [SECTION_2_NAME])
-  - Development Workflow (replaces generic [SECTION_3_NAME])
-
-Removed sections: none
+Other changes:
+  - Technology Stack: .NET 9 → .NET 10
+  - Project description updated to AI Genius web application (.NET 10 + React)
+  - Last Amended updated to 2026-05-16
 
 Templates reviewed:
   ✅ .specify/templates/plan-template.md
@@ -25,12 +22,15 @@ Templates reviewed:
   ✅ .specify/templates/tasks-template.md
      — Generic task structure; no principle-specific markers. No update needed.
   ✅ .github/prompts/*.prompt.md
-     — All are minimal frontmatter stubs; no CLAUDE-only or outdated references found.
+     — All are minimal frontmatter stubs; no outdated references found.
 
 Deferred TODOs: none
 -->
 
 # AI Genius Constitution
+
+Governing principles for the AI Genius web application, consisting of a .NET 10
+Minimal API backend and a React + Vite frontend deployed on Microsoft Azure.
 
 ## Core Principles
 
@@ -78,20 +78,22 @@ introduced.
 **Rationale**: Unnecessary complexity increases maintenance burden, onboarding
 friction, and the surface area for defects.
 
-### V. Tested
+### V. Demo Session
 
-Every API route MUST be covered by at least one automated unit or integration
-test. The frontend MUST build cleanly (`npm run build` with zero errors) on
-every CI run. Test failures MUST block merge to `main`.
+The implementation MUST follow common industry practice and standard tooling.
+Processes MUST be kept as simple as possible — prefer built-in features and
+well-known patterns over custom solutions. Edge cases and over-engineering MUST
+be avoided; focus on the primary use case. Workflows MUST be iterable quickly.
 
-**Rationale**: Automated tests are the enforcement mechanism for all other
-principles; without them, compliance is unverifiable.
+**Rationale**: Demo contexts require clarity and speed of iteration over
+exhaustive coverage. Complexity obscures intent and increases the risk of
+blocking progress on non-essential concerns.
 
 ## Technology Stack
 
 | Layer | Technology |
 |---|---|
-| API backend | .NET 9 Minimal API (`src/ai-genius-api/`) |
+| API backend | .NET 10 Minimal API (`src/ai-genius-api/`) |
 | Frontend | React 18 + Vite (`src/ai-genius-web/`) |
 | Infrastructure as Code | Azure Bicep (`bicep/`) |
 | CI/CD | GitHub Actions (`.github/workflows/`) |
@@ -135,4 +137,4 @@ versioning. The PR requires at least one approving review before merge.
 **Compliance review**: Adherence to this constitution MUST be verified at each
 PR review and during `/speckit.plan` Constitution Check gates.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-03-22
+**Version**: 2.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-05-16
