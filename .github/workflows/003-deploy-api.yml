@@ -1,0 +1,61 @@
+name: 003 Deploy API to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+
+jobs:
+  deploy-api:
+    name: Build and Deploy API
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish API
+        run: |
+          dotnet publish src/ai-genius-api/ai-genius-api.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            --output ./publish
+
+      - name: Zip publish output
+        run: |
+          cd publish
+          zip -r ../publish.zip .
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.APP_SERVICE_NAME }}
+          package: ./publish.zip
