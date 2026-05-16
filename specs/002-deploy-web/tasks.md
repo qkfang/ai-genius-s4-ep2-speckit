@@ -17,7 +17,7 @@
 
 **Purpose**: Create the workflow file skeleton with the display name and basic workflow-level YAML structure.
 
-- [ ] T001 Create `.github/workflows/002-deploy-web.yml` with `name: 002 Deploy Web to Azure` and a placeholder `on:` and `jobs:` block
+- [X] T001 Create `.github/workflows/002-deploy-web.yml` with `name: 002 Deploy Web to Azure` and a placeholder `on:` and `jobs:` block
 
 **Checkpoint**: File `.github/workflows/002-deploy-web.yml` exists and is valid YAML.
 
@@ -29,9 +29,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T002 Add `jobs.deploy` with `name: Build and Deploy Frontend`, `runs-on: ubuntu-latest`, and `environment: ${{ github.event.inputs.environment || 'dev' }}` in `.github/workflows/002-deploy-web.yml`
-- [ ] T003 Add `actions/checkout@v4` step inside `jobs.deploy.steps` in `.github/workflows/002-deploy-web.yml`
-- [ ] T004 Add `actions/setup-node@v4` step with `node-version: '20'`, `cache: 'npm'`, and `cache-dependency-path: src/ai-genius-web/package-lock.json` in `.github/workflows/002-deploy-web.yml`
+- [X] T002 Add `jobs.deploy` with `name: Build and Deploy Frontend`, `runs-on: ubuntu-latest`, and `environment: ${{ github.event.inputs.environment || 'dev' }}` in `.github/workflows/002-deploy-web.yml`
+- [X] T003 Add `actions/checkout@v4` step inside `jobs.deploy.steps` in `.github/workflows/002-deploy-web.yml`
+- [X] T004 Add `actions/setup-node@v4` step with `node-version: '20'`, `cache: 'npm'`, and `cache-dependency-path: src/ai-genius-web/package-lock.json` in `.github/workflows/002-deploy-web.yml`
 
 **Checkpoint**: Foundation ready — job scaffolding and shared steps are in place. User story steps can now be added.
 
@@ -45,11 +45,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add `on.push.branches: [main]` trigger in `.github/workflows/002-deploy-web.yml`
-- [ ] T006 [US1] Add `npm ci` step scoped to `src/ai-genius-web` (`working-directory: src/ai-genius-web`) in `.github/workflows/002-deploy-web.yml`
-- [ ] T007 [US1] Add `npm run build` step with `env: VITE_API_URL: ${{ vars.VITE_API_URL }}` and `working-directory: src/ai-genius-web` in `.github/workflows/002-deploy-web.yml`
-- [ ] T008 [US1] Add `azure/login@v1` step with `creds: ${{ secrets.AZURE_CREDENTIALS }}` in `.github/workflows/002-deploy-web.yml`
-- [ ] T009 [US1] Add `Azure/static-web-apps-deploy@v1` step with `action: upload`, `app_location: src/ai-genius-web/dist`, `output_location: ""`, `skip_app_build: true`, `repo_token: ${{ secrets.GITHUB_TOKEN }}`, and `azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}` in `.github/workflows/002-deploy-web.yml`
+- [X] T005 [US1] Add `on.push.branches: [main]` trigger in `.github/workflows/002-deploy-web.yml`
+- [X] T006 [US1] Add `npm ci` step scoped to `src/ai-genius-web` (`working-directory: src/ai-genius-web`) in `.github/workflows/002-deploy-web.yml`
+- [X] T007 [US1] Add `npm run build` step with `env: VITE_API_URL: ${{ vars.VITE_API_URL }}` and `working-directory: src/ai-genius-web` in `.github/workflows/002-deploy-web.yml`
+- [X] T008 [US1] Add `azure/login@v1` step with `creds: ${{ secrets.AZURE_CREDENTIALS }}` in `.github/workflows/002-deploy-web.yml`
+- [X] T009 [US1] Add `Azure/static-web-apps-deploy@v1` step with `action: upload`, `app_location: src/ai-genius-web/dist`, `output_location: ""`, `skip_app_build: true`, `repo_token: ${{ secrets.GITHUB_TOKEN }}`, and `azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}` in `.github/workflows/002-deploy-web.yml`
 
 **Checkpoint**: User Story 1 fully functional — a push to `main` triggers the complete install → build → login → deploy pipeline.
 
@@ -63,7 +63,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Add `on.workflow_dispatch.inputs.environment` with `description: "Target environment"`, `required: true`, `default: "dev"`, `type: choice`, and `options: [dev, qa, prod]` in `.github/workflows/002-deploy-web.yml`
+- [X] T010 [US2] Add `on.workflow_dispatch.inputs.environment` with `description: "Target environment"`, `required: true`, `default: "dev"`, `type: choice`, and `options: [dev, qa, prod]` in `.github/workflows/002-deploy-web.yml`
 
 **Checkpoint**: User Story 2 fully functional — "Run workflow" button in GitHub Actions UI accepts an environment choice and runs the full pipeline with environment-scoped variables.
 
@@ -77,7 +77,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Add top-level `concurrency` block with `group: ${{ github.workflow }}-${{ github.ref }}` and `cancel-in-progress: true` in `.github/workflows/002-deploy-web.yml`
+- [X] T011 [US3] Add top-level `concurrency` block with `group: ${{ github.workflow }}-${{ github.ref }}` and `cancel-in-progress: true` in `.github/workflows/002-deploy-web.yml`
 
 **Checkpoint**: User Story 3 fully functional — concurrent runs on the same branch are automatically cancelled in favour of the newer run.
 
@@ -87,8 +87,8 @@
 
 **Purpose**: Final validation and completeness checks across the whole workflow.
 
-- [ ] T012 [P] Verify the complete `.github/workflows/002-deploy-web.yml` YAML is syntactically valid, all steps are in the correct order (checkout → setup-node → npm ci → npm run build → azure/login → swa-deploy), and all secret/variable references match the names in the contracts
-- [ ] T013 [P] Confirm `on:` block has both `push` (branches: [main]) and `workflow_dispatch` triggers, and that the `environment:` job key resolves to `${{ github.event.inputs.environment || 'dev' }}` covering both trigger paths
+- [X] T012 [P] Verify the complete `.github/workflows/002-deploy-web.yml` YAML is syntactically valid, all steps are in the correct order (checkout → setup-node → npm ci → npm run build → azure/login → swa-deploy), and all secret/variable references match the names in the contracts
+- [X] T013 [P] Confirm `on:` block has both `push` (branches: [main]) and `workflow_dispatch` triggers, and that the `environment:` job key resolves to `${{ github.event.inputs.environment || 'dev' }}` covering both trigger paths
 
 **Checkpoint**: Workflow file is complete, validated, and ready for the first real run.
 
