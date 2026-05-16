@@ -71,10 +71,10 @@ Two developers merge commits to `main` in quick succession. Only the most recent
 - **FR-004**: The pipeline MUST build the React application and produce a compiled output directory ready for static hosting.
 - **FR-005**: The pipeline MUST deploy the compiled output to Azure Static Web Apps using the environment-scoped Static Web Apps deployment token.
 - **FR-006**: The pipeline MUST authenticate to Azure using a service principal credential stored as a GitHub secret before performing any Azure operations.
-- **FR-007**: The pipeline MUST apply a concurrency group scoped to the workflow and branch so that a newer run cancels any in-progress run (`cancel-in-progress: true`).
+- **FR-007**: The pipeline MUST apply a concurrency group using `${{ github.workflow }}-${{ github.ref }}` scoped to the workflow and branch so that a newer run cancels any in-progress run (`cancel-in-progress: true`).
 - **FR-008**: The pipeline MUST default to the `dev` environment when triggered by a push to `main` (i.e., no explicit `workflow_dispatch` input is provided).
 - **FR-009**: The pipeline MUST fail the entire run if any step — dependency install, build, Azure login, or deployment — exits with an error.
-- **FR-010**: The pipeline MUST use a per-environment variable (`VITE_API_URL`) injected at build time so the compiled frontend targets the correct backend endpoint for the chosen environment.
+- **FR-010**: The pipeline MUST use a per-environment variable (`VITE_API_URL`) injected at build time — via the `environment:` job context (`vars.VITE_API_URL`) — so the compiled frontend targets the correct backend endpoint for the chosen environment.
 
 ## Success Criteria *(mandatory)*
 
@@ -88,10 +88,19 @@ Two developers merge commits to `main` in quick succession. Only the most recent
 
 ## Assumptions
 
-- The Azure Static Web App resource already exists (provisioned by the `001-deploy-infra` workflow or equivalent).
-- `AZURE_STATIC_WEB_APPS_API_TOKEN` is stored as a GitHub repository secret and is scoped per environment or shared across environments at the repository level.
+- The Azure Static Web App resource already exists (provisioned by the `001-deploy-infra` workflow or equivalent). It uses the **Free** tier for `dev` and the **Standard** tier for `prod`.
+- `AZURE_STATIC_WEB_APPS_API_TOKEN` is stored as a single GitHub repository-level secret shared across all environments.
 - `AZURE_CREDENTIALS` is stored as a GitHub repository secret in the standard service principal JSON format.
-- `VITE_API_URL` is available as a per-environment GitHub Actions variable (e.g., set on the `dev`, `qa`, and `prod` GitHub environments).
+- `VITE_API_URL` is available as a per-environment GitHub Actions variable set on each GitHub Environment (`dev`, `qa`, `prod`). The workflow job must declare an `environment:` key matching the target environment to access it via `vars.VITE_API_URL`.
 - Node.js 20 is sufficient for building the React + Vite application.
+- `APP_NAME` and `ENVIRONMENT` are available as GitHub repository-level variables.
 - The `npm run build` command in `src/ai-genius-web/package.json` produces output in `src/ai-genius-web/dist/`.
 - No backend API deployment or infrastructure provisioning occurs within this workflow — it is purely frontend build and deploy.
+
+## Clarifications
+
+### Session 2026-05-16
+
+- Q: Is `VITE_API_URL` a per-environment variable or a repository-level variable? → A: Per-environment variable — set on each GitHub Environment (dev, qa, prod); workflow job must declare `environment:` key to access it via `vars.VITE_API_URL`.
+- Q: What is the concurrency strategy for the workflow? → A: Group by `${{ github.workflow }}-${{ github.ref }}`; newer run cancels any in-progress run (`cancel-in-progress: true`).
+- Q: What Azure Static Web App tier is used per environment? → A: Free tier for `dev`; Standard tier for `prod`.
