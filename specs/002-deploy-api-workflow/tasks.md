@@ -29,9 +29,9 @@ description: "Task list for feature 002-deploy-api-workflow"
 
 **Purpose**: Verify prerequisites and confirm the workflow directory exists; no new project scaffolding is required because this feature adds a single YAML file.
 
-- [ ] T001 Verify `.github/workflows/` directory exists at the repository root and lists `deploy-infra.yml` (feature 001) — this confirms the location where `deploy-api.yml` will be added. No file changes.
-- [ ] T002 [P] Verify `src/ai-genius-api/ai-genius-api.csproj` targets `net9.0` (satisfies FR-004 "net8 or later LTS"); no edit required if `<TargetFramework>net9.0</TargetFramework>` is present.
-- [ ] T003 [P] Confirm the three repository secrets (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) and the repository variable (`APP_SERVICE_NAME`) are configured per `specs/002-deploy-api-workflow/quickstart.md` Steps 1–2. If missing, add them via **Settings → Secrets and variables → Actions** (no code change).
+- [X] T001 Verify `.github/workflows/` directory exists at the repository root and lists `deploy-infra.yml` (feature 001) — this confirms the location where `deploy-api.yml` will be added. No file changes.
+- [X] T002 [P] Verify `src/ai-genius-api/ai-genius-api.csproj` targets `net9.0` (satisfies FR-004 "net8 or later LTS"); no edit required if `<TargetFramework>net9.0</TargetFramework>` is present.
+- [X] T003 [P] Confirm the three repository secrets (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) and the repository variable (`APP_SERVICE_NAME`) are configured per `specs/002-deploy-api-workflow/quickstart.md` Steps 1–2. If missing, add them via **Settings → Secrets and variables → Actions** (no code change).
 
 ---
 
@@ -41,8 +41,8 @@ description: "Task list for feature 002-deploy-api-workflow"
 
 **⚠️ CRITICAL**: No user story phase can complete (green) until T004 ships.
 
-- [ ] T004 Add `app.MapGet("/health", () => Results.Ok(new { status = "ok" }));` to `src/ai-genius-api/Program.cs` near the existing `app.MapGet` calls. Leave the existing `/api/health` route untouched. The new route MUST return HTTP `200` with body **exactly** `{"status":"ok"}` (FR-010, SC-002). Verify locally with `dotnet build src/ai-genius-api/ai-genius-api.csproj` and a `dotnet run` + `curl http://localhost:<port>/health` smoke test.
-- [ ] T005 (Prerequisite check — owned by feature 001) Confirm the Bicep-provisioned App Service (`bicep/modules/webapp.bicep`) sets `httpsOnly: true`, runs on a **Linux B1** plan, and uses the `.NET 9` runtime stack (FR-009, US3). If not, raise a follow-up against feature 001; do **not** edit Bicep as part of this feature.
+- [X] T004 Add `app.MapGet("/health", () => Results.Ok(new { status = "ok" }));` to `src/ai-genius-api/Program.cs` near the existing `app.MapGet` calls. Leave the existing `/api/health` route untouched. The new route MUST return HTTP `200` with body **exactly** `{"status":"ok"}` (FR-010, SC-002). Verify locally with `dotnet build src/ai-genius-api/ai-genius-api.csproj` and a `dotnet run` + `curl http://localhost:<port>/health` smoke test.
+- [X] T005 (Prerequisite check — owned by feature 001) Confirm the Bicep-provisioned App Service (`bicep/modules/webapp.bicep`) sets `httpsOnly: true`, runs on a **Linux B1** plan, and uses the `.NET 9` runtime stack (FR-009, US3). If not, raise a follow-up against feature 001; do **not** edit Bicep as part of this feature.
 
 **Checkpoint**: `/health` endpoint exists in source; App Service is HTTPS-only on Linux B1. Ready to author the workflow.
 
@@ -58,13 +58,13 @@ description: "Task list for feature 002-deploy-api-workflow"
 
 > All edits below target the same new file `.github/workflows/deploy-api.yml` and are therefore **sequential** (no [P]). Build the file incrementally so each task is reviewable.
 
-- [ ] T006 [US1] Create `.github/workflows/deploy-api.yml` with workflow-level metadata: `name: "Deploy API to Azure"`, `on.push.branches: [main]`, and `on.workflow_dispatch: {}` (FR-001, FR-002, edge case "Manual re-run"). Add `concurrency: { group: deploy-api-${{ github.ref }}, cancel-in-progress: false }` (FR-014).
-- [ ] T007 [US1] In `.github/workflows/deploy-api.yml`, declare a single job `deploy-api` with `runs-on: ubuntu-latest` and add the `actions/checkout@v4` step (Step 1 of the data-model.md step table).
-- [ ] T008 [US1] In `.github/workflows/deploy-api.yml`, add the `actions/setup-dotnet@v4` step pinned to `dotnet-version: 9.0.x` (Step 2; satisfies FR-004).
-- [ ] T009 [US1] In `.github/workflows/deploy-api.yml`, add a `run` step that executes `dotnet publish src/ai-genius-api/ai-genius-api.csproj -c Release -o ./publish` (Step 3; FR-004, FR-005 — non-zero exit short-circuits the job).
-- [ ] T010 [US1] In `.github/workflows/deploy-api.yml`, add a `run` step that zips the publish output: `cd ./publish && zip -r ../api.zip .` (Step 4; produces `./api.zip` for Zip Deploy per FR-006).
-- [ ] T011 [US1] In `.github/workflows/deploy-api.yml`, add the `azure/webapps-deploy@v3` step with `app-name: ${{ vars.APP_SERVICE_NAME }}` and `package: ./api.zip` (Step 6; FR-006, FR-013). Place it **after** the Azure login step authored in US2.
-- [ ] T012 [US1] In `.github/workflows/deploy-api.yml`, ensure every step has a human-readable `name:` and the job/steps emit clear log output (FR-015, SC-005) — e.g., echo the resolved `APP_SERVICE_NAME` (non-sensitive) before deploy.
+- [X] T006 [US1] Create `.github/workflows/deploy-api.yml` with workflow-level metadata: `name: "Deploy API to Azure"`, `on.push.branches: [main]`, and `on.workflow_dispatch: {}` (FR-001, FR-002, edge case "Manual re-run"). Add `concurrency: { group: deploy-api-${{ github.ref }}, cancel-in-progress: false }` (FR-014).
+- [X] T007 [US1] In `.github/workflows/deploy-api.yml`, declare a single job `deploy-api` with `runs-on: ubuntu-latest` and add the `actions/checkout@v4` step (Step 1 of the data-model.md step table).
+- [X] T008 [US1] In `.github/workflows/deploy-api.yml`, add the `actions/setup-dotnet@v4` step pinned to `dotnet-version: 9.0.x` (Step 2; satisfies FR-004).
+- [X] T009 [US1] In `.github/workflows/deploy-api.yml`, add a `run` step that executes `dotnet publish src/ai-genius-api/ai-genius-api.csproj -c Release -o ./publish` (Step 3; FR-004, FR-005 — non-zero exit short-circuits the job).
+- [X] T010 [US1] In `.github/workflows/deploy-api.yml`, add a `run` step that zips the publish output: `cd ./publish && zip -r ../api.zip .` (Step 4; produces `./api.zip` for Zip Deploy per FR-006).
+- [X] T011 [US1] In `.github/workflows/deploy-api.yml`, add the `azure/webapps-deploy@v3` step with `app-name: ${{ vars.APP_SERVICE_NAME }}` and `package: ./api.zip` (Step 6; FR-006, FR-013). Place it **after** the Azure login step authored in US2.
+- [X] T012 [US1] In `.github/workflows/deploy-api.yml`, ensure every step has a human-readable `name:` and the job/steps emit clear log output (FR-015, SC-005) — e.g., echo the resolved `APP_SERVICE_NAME` (non-sensitive) before deploy.
 
 **Checkpoint**: A push to `main` builds and zip-deploys the API. (Authentication & health-check still pending — handled by US2 & US3.)
 
@@ -78,9 +78,9 @@ description: "Task list for feature 002-deploy-api-workflow"
 
 ### Implementation for User Story 2
 
-- [ ] T013 [US2] In `.github/workflows/deploy-api.yml`, add the workflow-level (or job-level) `permissions:` block with `id-token: write` and `contents: read` — the minimum required for OIDC (FR-008, contract section "Required Permissions Block"). Without this, `azure/login@v2` fails with "Could not get ID token".
-- [ ] T014 [US2] In `.github/workflows/deploy-api.yml`, add the `azure/login@v2` step (Step 5) **after** the zip step (T010) and **before** the deploy step (T011), with inputs `client-id: ${{ secrets.AZURE_CLIENT_ID }}`, `tenant-id: ${{ secrets.AZURE_TENANT_ID }}`, `subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}`. Do **not** add a `creds:` input (FR-007).
-- [ ] T015 [US2] Grep `.github/workflows/deploy-api.yml` to confirm none of the forbidden names appear: `AZURE_CREDENTIALS`, `AZURE_CLIENT_SECRET`, `AZUREAPPSERVICE_PUBLISHPROFILE` (constitution / FR-007 validation rule from data-model.md §4). Treat any hit as a blocker.
+- [X] T013 [US2] In `.github/workflows/deploy-api.yml`, add the workflow-level (or job-level) `permissions:` block with `id-token: write` and `contents: read` — the minimum required for OIDC (FR-008, contract section "Required Permissions Block"). Without this, `azure/login@v2` fails with "Could not get ID token".
+- [X] T014 [US2] In `.github/workflows/deploy-api.yml`, add the `azure/login@v2` step (Step 5) **after** the zip step (T010) and **before** the deploy step (T011), with inputs `client-id: ${{ secrets.AZURE_CLIENT_ID }}`, `tenant-id: ${{ secrets.AZURE_TENANT_ID }}`, `subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}`. Do **not** add a `creds:` input (FR-007).
+- [X] T015 [US2] Grep `.github/workflows/deploy-api.yml` to confirm none of the forbidden names appear: `AZURE_CREDENTIALS`, `AZURE_CLIENT_SECRET`, `AZUREAPPSERVICE_PUBLISHPROFILE` (constitution / FR-007 validation rule from data-model.md §4). Treat any hit as a blocker.
 - [ ] T016 [US2] (External, optional) If `quickstart.md` step 1 has not been completed, configure the Entra ID Federated Credential with subject `repo:qkfang/ai-genius-s4-ep2-speckit:ref:refs/heads/main` and assign the identity the `Website Contributor` role on the target App Service. No repo file changes; verifies US2 acceptance scenario 3.
 
 **Checkpoint**: Workflow authenticates to Azure via OIDC alone. Combined with US1, a push to `main` now builds, logs in, and deploys — but post-deploy verification (US3) is still missing.
@@ -95,9 +95,9 @@ description: "Task list for feature 002-deploy-api-workflow"
 
 ### Implementation for User Story 3
 
-- [ ] T017 [US3] In `.github/workflows/deploy-api.yml`, add the final step (Step 7) **after** the deploy step (T011): a `run` step that executes `curl --fail -sS "https://${{ vars.APP_SERVICE_NAME }}.azurewebsites.net/health"` and asserts the body equals **exactly** `{"status":"ok"}` (FR-010, SC-002). Use `--fail` so a non-2xx response exits non-zero (red check, FR-012, SC-007).
-- [ ] T018 [US3] In `.github/workflows/deploy-api.yml`, wrap the `/health` curl in a short retry loop (e.g., up to ~6 attempts × 10s sleep) to absorb the App Service cold-start window after Zip Deploy, while still failing within the 2-minute SC-002 budget. The exit code of the final attempt determines step success.
-- [ ] T019 [US3] In `.github/workflows/deploy-api.yml`, ensure the `https://` scheme is hard-coded in the probe URL (never `http://`), so the post-deploy check itself only exercises the encrypted surface (US3 acceptance scenario 3).
+- [X] T017 [US3] In `.github/workflows/deploy-api.yml`, add the final step (Step 7) **after** the deploy step (T011): a `run` step that executes `curl --fail -sS "https://${{ vars.APP_SERVICE_NAME }}.azurewebsites.net/health"` and asserts the body equals **exactly** `{"status":"ok"}` (FR-010, SC-002). Use `--fail` so a non-2xx response exits non-zero (red check, FR-012, SC-007).
+- [X] T018 [US3] In `.github/workflows/deploy-api.yml`, wrap the `/health` curl in a short retry loop (e.g., up to ~6 attempts × 10s sleep) to absorb the App Service cold-start window after Zip Deploy, while still failing within the 2-minute SC-002 budget. The exit code of the final attempt determines step success.
+- [X] T019 [US3] In `.github/workflows/deploy-api.yml`, ensure the `https://` scheme is hard-coded in the probe URL (never `http://`), so the post-deploy check itself only exercises the encrypted surface (US3 acceptance scenario 3).
 - [ ] T020 [US3] (Verification, no file change) Manually run `curl -sS -o /dev/null -w "%{http_code}\n" "http://${APP_SERVICE_NAME}.azurewebsites.net/health"` against the live App Service and confirm it returns `301` (redirect) or `403` (SC-004, US3 acceptance scenario 2). If it returns 200 over plain HTTP, raise a follow-up against feature 001's Bicep (`httpsOnly: true` missing).
 
 **Checkpoint**: All three P1 user stories are implemented. The workflow now: triggers on `main` push → builds → authenticates via OIDC → zip-deploys → verifies HTTPS `/health` → green ✅ on success, red ❌ on any failure.
@@ -108,8 +108,8 @@ description: "Task list for feature 002-deploy-api-workflow"
 
 **Purpose**: Final validation, documentation, and end-to-end quickstart verification.
 
-- [ ] T021 [P] Validate `.github/workflows/deploy-api.yml` YAML syntax locally with `actionlint` (or `yq eval . .github/workflows/deploy-api.yml`) — catches indentation and action-input typos before the first push.
-- [ ] T022 [P] Cross-check `.github/workflows/deploy-api.yml` against `specs/002-deploy-api-workflow/contracts/workflow-interface.md`: triggers (`push: [main]` + `workflow_dispatch`), permissions block, concurrency group, three secrets, one variable, no forbidden secret names, no `jobs.<id>.outputs`.
+- [X] T021 [P] Validate `.github/workflows/deploy-api.yml` YAML syntax locally with `actionlint` (or `yq eval . .github/workflows/deploy-api.yml`) — catches indentation and action-input typos before the first push.
+- [X] T022 [P] Cross-check `.github/workflows/deploy-api.yml` against `specs/002-deploy-api-workflow/contracts/workflow-interface.md`: triggers (`push: [main]` + `workflow_dispatch`), permissions block, concurrency group, three secrets, one variable, no forbidden secret names, no `jobs.<id>.outputs`.
 - [ ] T023 Run the end-to-end quickstart in `specs/002-deploy-api-workflow/quickstart.md` (Steps 1–5) from a clean push to `main`: confirm SC-001 (run starts <1 min), SC-002 (`/health` returns `{"status":"ok"}` within 2 min of green), SC-006 (total <10 min), SC-007 (forced regression goes red).
 - [ ] T024 [P] If any deviation from `spec.md` or `contracts/workflow-interface.md` was discovered during T023, update the spec/plan/contract docs (not just the YAML) so the artifacts stay in sync — then re-run `/speckit.analyze` if available.
 

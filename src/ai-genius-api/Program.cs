@@ -37,6 +37,9 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = "swagger";
 });
 
+// GET /health — minimal liveness probe for deploy workflow smoke test
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
 // GET /api/status — runtime status
 app.MapGet("/api/status", () => Results.Ok(new
 {
