@@ -575,7 +575,7 @@ Step 1:
 
 Setup multiple environment deployment for bicep with approvals to the AI Genius CI/CD infra pipeline. Update the GitHub Actions workflows to include:
 
-- New workflow (.github/workflows/004-multi-env-cicd.yml) that runs on every pull request to main 
+- New workflow (.github/workflows/004-multi-env-ci.yml) that runs on every pull request to main 
 - Follow the ENVIRONMENT & concurrency like `001-deploy-infra.yml`
 - `001-deploy-infra.yml` already have dev env, use this as baseline
 - The pipeline should deployes bicep validation, bicep plan and deploy.

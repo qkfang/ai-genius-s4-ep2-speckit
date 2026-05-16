@@ -1,0 +1,163 @@
+name: 004 Multi-Env Bicep CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+
+jobs:
+  # ── Validate ────────────────────────────────────────────────────────────────
+  validate:
+    name: Bicep Validate
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Validate Bicep template
+        run: |
+          az deployment group validate \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file bicep/main.bicep \
+            --parameters bicep/parameters.dev.json
+
+  # ── Dev ─────────────────────────────────────────────────────────────────────
+  plan-dev:
+    name: Bicep Plan (dev)
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: What-if Bicep (dev)
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file bicep/main.bicep \
+            --parameters bicep/parameters.dev.json
+
+  deploy-dev:
+    name: Deploy (dev)
+    needs: plan-dev
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep (dev)
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file bicep/main.bicep \
+            --parameters bicep/parameters.dev.json
+
+  # ── QA ──────────────────────────────────────────────────────────────────────
+  plan-qa:
+    name: Bicep Plan (qa)
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: What-if Bicep (qa)
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file bicep/main.bicep \
+            --parameters bicep/parameters.qa.json
+
+  deploy-qa:
+    name: Deploy (qa)
+    needs: plan-qa
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep (qa)
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file bicep/main.bicep \
+            --parameters bicep/parameters.qa.json
+
+  # ── Prod ────────────────────────────────────────────────────────────────────
+  plan-prod:
+    name: Bicep Plan (prod)
+    needs: deploy-qa
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: What-if Bicep (prod)
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file bicep/main.bicep \
+            --parameters bicep/parameters.prod.json
+
+  deploy-prod:
+    name: Deploy (prod)
+    needs: plan-prod
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep (prod)
+        run: |
+          az deployment group create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --template-file bicep/main.bicep \
+            --parameters bicep/parameters.prod.json
