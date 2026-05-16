@@ -93,6 +93,21 @@ Bicep (Azure infrastructure)
 - GitHub Action variable: VITE_API_URL (https://aigenius4-api-dev.azurewebsites.net)
 
 
+## CI/CD Quality Gates (regression-sensitive)
+
+- The job name `ci` in `.github/workflows/ci.yml` is **load-bearing**: it is referenced
+  by string match in the `main` branch protection rule's required status checks list
+  (contract invariants C1 + B1 + B5 in `specs/002-cicd-quality-gates/contracts/`).
+  **Do not rename or remove the `ci` job** without simultaneously updating
+  **Settings → Branches → main → Required status checks**, or the merge gate will be
+  silently disabled.
+- `ci.yml` MUST NOT reference secrets or deploy anything — it is a pre-merge gate only.
+- Deployment workflows that target `dev`/`qa`/`prod` MUST declare an `environment:` key
+  on the deploying job so GitHub Environment protection rules apply
+  (see `.github/workflows/deploy-infra.yml`).
+- See `docs/ci-cd-quality-gates.md` for the contributor-facing summary.
+
+
 ## Tech Choice
 
 - Add resource group and env name as action variable on top

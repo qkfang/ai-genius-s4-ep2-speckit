@@ -6,3 +6,10 @@ coverage/
 .env.local
 .DS_Store
 generated-pipeline.yml
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
