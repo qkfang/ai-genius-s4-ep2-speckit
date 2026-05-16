@@ -1,31 +1,28 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template) → 1.0.0
-Initial ratification — constitution filled from blank template.
+Version change: 1.0.0 → 2.0.0
+Rationale for MAJOR bump: Principle V "Tested" removed and replaced by "Demo Session" — a
+backward-incompatible governance change that lifts mandatory test-coverage requirements.
 
 Modified principles:
-  [PRINCIPLE_1_NAME] → I. Security-First
-  [PRINCIPLE_2_NAME] → II. Cloud-Native
-  [PRINCIPLE_3_NAME] → III. CI/CD-Driven
-  [PRINCIPLE_4_NAME] → IV. Simplicity
-  [PRINCIPLE_5_NAME] → V. Tested
+  V. Tested → V. Demo Session (replaced — backward-incompatible removal of testing mandate)
 
-Added sections:
-  - Technology Stack (replaces generic [SECTION_2_NAME])
-  - Development Workflow (replaces generic [SECTION_3_NAME])
+Added sections: none
 
 Removed sections: none
 
 Templates reviewed:
   ✅ .specify/templates/plan-template.md
-     — Constitution Check gate present; dynamically reads this file. No update needed.
+     — Constitution Check gate dynamically reads this file. No hardcoded principle names. No update needed.
   ✅ .specify/templates/spec-template.md
      — Generic; no principle-specific markers. No update needed.
   ✅ .specify/templates/tasks-template.md
      — Generic task structure; no principle-specific markers. No update needed.
   ✅ .github/prompts/*.prompt.md
-     — All are minimal frontmatter stubs; no CLAUDE-only or outdated references found.
+     — All minimal frontmatter stubs; no outdated references found.
+
+Technology Stack: .NET version updated 9 → 10 to match project csproj and workflow config.
 
 Deferred TODOs: none
 -->
@@ -78,20 +75,24 @@ introduced.
 **Rationale**: Unnecessary complexity increases maintenance burden, onboarding
 friction, and the surface area for defects.
 
-### V. Tested
+### V. Demo Session
 
-Every API route MUST be covered by at least one automated unit or integration
-test. The frontend MUST build cleanly (`npm run build` with zero errors) on
-every CI run. Test failures MUST block merge to `main`.
+This project exists as a demonstration and learning resource. Processes MUST be
+kept as simple as possible. Common industry practices MUST be used rather than
+bespoke tooling or custom abstractions. Over-engineering, premature optimisation,
+and complexity introduced solely for elegance are prohibited.
+Participants MUST be able to understand and reproduce any step without specialist
+prior knowledge beyond the stated prerequisites.
 
-**Rationale**: Automated tests are the enforcement mechanism for all other
-principles; without them, compliance is unverifiable.
+**Rationale**: A demo context demands clarity above all else. Convoluted setups
+obscure the learning objective, slow iteration, and make onboarding harder. The
+simplest working approach is always correct for this project.
 
 ## Technology Stack
 
 | Layer | Technology |
 |---|---|
-| API backend | .NET 9 Minimal API (`src/ai-genius-api/`) |
+| API backend | .NET 10 Minimal API (`src/ai-genius-api/`) |
 | Frontend | React 18 + Vite (`src/ai-genius-web/`) |
 | Infrastructure as Code | Azure Bicep (`bicep/`) |
 | CI/CD | GitHub Actions (`.github/workflows/`) |
@@ -135,4 +136,4 @@ versioning. The PR requires at least one approving review before merge.
 **Compliance review**: Adherence to this constitution MUST be verified at each
 PR review and during `/speckit.plan` Constitution Check gates.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-03-22
+**Version**: 2.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-05-16
