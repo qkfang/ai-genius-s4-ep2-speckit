@@ -24,8 +24,6 @@ permissions:
 
 env:
   ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-  APP_NAME: ${{ vars.APP_NAME }}
   DOTNET_VERSION: '10.0.x'
   PROJECT_PATH: 'src/ai-genius-api/ai-genius-api.csproj'
 
@@ -43,12 +41,10 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Publish .NET API (linux-x64, self-contained)
+      - name: Publish .NET API (framework-dependent)
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} \
             --configuration Release \
-            --runtime linux-x64 \
-            --self-contained true \
             --output ./publish
 
       - name: Zip publish output
@@ -62,5 +58,5 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: ${{ env.APP_NAME }}-api-${{ env.ENVIRONMENT }}
+          app-name: ${{ vars.APP_SERVICE_NAME }}
           package: ./publish.zip
