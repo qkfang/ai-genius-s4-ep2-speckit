@@ -1,50 +1,50 @@
 name: 001 Deploy Infra to Azure
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Target environment"
-        required: true
-        default: "dev"
-        type: choice
-        options:
-          - dev
-          - qa
-          - prod
+    push:
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: "Target environment"
+                required: true
+                default: "dev"
+                type: choice
+                options:
+                    - dev
+                    - qa
+                    - prod
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 
 env:
-  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
-  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-  APP_NAME: ${{ vars.APP_NAME }}
-
+    ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+    AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+    APP_NAME: ${{ vars.APP_NAME }}
 
 jobs:
-  infra:
-    name: Deploy Bicep
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'dev' }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    infra:
+        name: Deploy Bicep
+        runs-on: ubuntu-latest
+        environment: ${{ github.event.inputs.environment || 'dev' }}
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Azure CLI Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+            - name: Azure CLI Login
+              uses: azure/login@v1
+              with:
+                  creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy Bicep template
-        run: |
-          az deployment group create \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-            --template-file bicep/main.bicep \
-            --parameters bicep/parameters.${{ env.ENVIRONMENT }}.json \
-            --parameters \
-                appName=${{ env.APP_NAME }} \
-                environment=${{ env.ENVIRONMENT }}
+            - name: Deploy Bicep template
+              run: |
+                  az deployment group create \
+                    --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+                    --template-file bicep/main.bicep \
+                    --parameters bicep/parameters.${{ env.ENVIRONMENT }}.json \
+                    --parameters \
+                        appName=${{ env.APP_NAME }} \
+                        location=${{ vars.AZURE_LOCATION }} \
+                        environment=${{ env.ENVIRONMENT }}
