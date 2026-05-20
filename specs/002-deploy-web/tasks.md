@@ -19,10 +19,10 @@
 
 **Purpose**: Confirm the existing repo conventions and frontend build inputs before creating the deployment workflow.
 
-- [ ] T001 Review the existing GitHub Actions environment and concurrency pattern in `.github/workflows/001-deploy-infra.yml`
-- [ ] T002 [P] Verify frontend build scripts and npm lockfile inputs in `src/ai-genius-web/package.json` and `src/ai-genius-web/package-lock.json`
-- [ ] T003 [P] Verify Vite build output remains `dist` in `src/ai-genius-web/vite.config.js`
-- [ ] T004 [P] Verify Static Web Apps SKU readiness values in `bicep/parameters.dev.json` and `bicep/parameters.prod.json`
+- [x] T001 Review the existing GitHub Actions environment and concurrency pattern in `.github/workflows/001-deploy-infra.yml`
+- [x] T002 [P] Verify frontend build scripts and npm lockfile inputs in `src/ai-genius-web/package.json` and `src/ai-genius-web/package-lock.json`
+- [x] T003 [P] Verify Vite build output remains `dist` in `src/ai-genius-web/vite.config.js`
+- [x] T004 [P] Verify Static Web Apps SKU readiness values in `bicep/parameters.dev.json` and `bicep/parameters.prod.json`
 
 ---
 
@@ -32,9 +32,9 @@
 
 **Critical**: No user story work can be completed until this workflow foundation exists.
 
-- [ ] T005 Create `.github/workflows/002-deploy-web.yml` with workflow name, `ubuntu-latest` job, and `actions/checkout@v4` checkout step
-- [ ] T006 Add shared workflow environment variables `ENVIRONMENT`, `APP_NAME`, and `VITE_API_URL` in `.github/workflows/002-deploy-web.yml`
-- [ ] T007 Add `actions/setup-node@v4` with Node.js 20 and npm cache path `src/ai-genius-web/package-lock.json` in `.github/workflows/002-deploy-web.yml`
+- [x] T005 Create `.github/workflows/002-deploy-web.yml` with workflow name, `ubuntu-latest` job, and `actions/checkout@v4` checkout step
+- [x] T006 Add shared workflow environment variables `ENVIRONMENT`, `APP_NAME`, and `VITE_API_URL` in `.github/workflows/002-deploy-web.yml`
+- [x] T007 Add `actions/setup-node@v4` with Node.js 20 and npm cache path `src/ai-genius-web/package-lock.json` in `.github/workflows/002-deploy-web.yml`
 
 **Checkpoint**: Workflow foundation is ready for user story implementation.
 
@@ -48,13 +48,13 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Add `push` trigger for branch `main` in `.github/workflows/002-deploy-web.yml`
-- [ ] T009 [US1] Add concurrency group `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true` in `.github/workflows/002-deploy-web.yml`
-- [ ] T010 [US1] Add dependency installation step running `npm ci` with working directory `src/ai-genius-web` in `.github/workflows/002-deploy-web.yml`
-- [ ] T011 [US1] Add production build step running `npm run build` with `VITE_API_URL` available from `vars.VITE_API_URL` in `.github/workflows/002-deploy-web.yml`
-- [ ] T012 [US1] Add Azure Static Web Apps upload step for `src/ai-genius-web/dist` with `skip_app_build: true` in `.github/workflows/002-deploy-web.yml`
-- [ ] T013 [US1] Run the local frontend build check from `src/ai-genius-web/package.json` and verify generated output under `src/ai-genius-web/dist`
-- [ ] T014 [US1] Verify the main-push workflow contract in `.github/workflows/002-deploy-web.yml` against `specs/002-deploy-web/contracts/workflow-interface.md`
+- [x] T008 [US1] Add `push` trigger for branch `main` in `.github/workflows/002-deploy-web.yml`
+- [x] T009 [US1] Add concurrency group `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true` in `.github/workflows/002-deploy-web.yml`
+- [x] T010 [US1] Add dependency installation step running `npm ci` with working directory `src/ai-genius-web` in `.github/workflows/002-deploy-web.yml`
+- [x] T011 [US1] Add production build step running `npm run build` with `VITE_API_URL` available from `vars.VITE_API_URL` in `.github/workflows/002-deploy-web.yml`
+- [x] T012 [US1] Add Azure Static Web Apps upload step for `src/ai-genius-web/dist` with `skip_app_build: true` in `.github/workflows/002-deploy-web.yml`
+- [x] T013 [US1] Run the local frontend build check from `src/ai-genius-web/package.json` and verify generated output under `src/ai-genius-web/dist`
+- [x] T014 [US1] Verify the main-push workflow contract in `.github/workflows/002-deploy-web.yml` against `specs/002-deploy-web/contracts/workflow-interface.md`
 
 **Checkpoint**: User Story 1 is complete when main branch pushes can build and deploy the frontend automatically.
 
@@ -68,11 +68,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add `workflow_dispatch` input `environment` with choices `dev`, `qa`, and `prod` in `.github/workflows/002-deploy-web.yml`
-- [ ] T016 [US2] Bind the deployment job environment to `${{ github.event.inputs.environment || 'dev' }}` in `.github/workflows/002-deploy-web.yml`
-- [ ] T017 [US2] Ensure push-triggered and manual runs both default `ENVIRONMENT` to `dev` when no input is provided in `.github/workflows/002-deploy-web.yml`
-- [ ] T018 [US2] Verify `dev` and `prod` Static Web Apps SKU policy in `bicep/parameters.dev.json` and `bicep/parameters.prod.json`
-- [ ] T019 [US2] Validate the manual deployment checklist in `specs/002-deploy-web/quickstart.md` against `.github/workflows/002-deploy-web.yml`
+- [x] T015 [US2] Add `workflow_dispatch` input `environment` with choices `dev`, `qa`, and `prod` in `.github/workflows/002-deploy-web.yml`
+- [x] T016 [US2] Bind the deployment job environment to `${{ github.event.inputs.environment || 'dev' }}` in `.github/workflows/002-deploy-web.yml`
+- [x] T017 [US2] Ensure push-triggered and manual runs both default `ENVIRONMENT` to `dev` when no input is provided in `.github/workflows/002-deploy-web.yml`
+- [x] T018 [US2] Verify `dev` and `prod` Static Web Apps SKU policy in `bicep/parameters.dev.json` and `bicep/parameters.prod.json`
+- [x] T019 [US2] Validate the manual deployment checklist in `specs/002-deploy-web/quickstart.md` against `.github/workflows/002-deploy-web.yml`
 
 **Checkpoint**: User Story 2 is complete when manual runs expose the environment choice and honor the selected target environment.
 
@@ -86,10 +86,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Add `azure/login@v1` authentication using `secrets.AZURE_CREDENTIALS` in `.github/workflows/002-deploy-web.yml`
-- [ ] T021 [US3] Pass `secrets.AZURE_STATIC_WEB_APPS_API_TOKEN` and `secrets.GITHUB_TOKEN` to the Static Web Apps deploy step in `.github/workflows/002-deploy-web.yml`
-- [ ] T022 [US3] Confirm `.github/workflows/002-deploy-web.yml` contains no hard-coded Azure credentials, deployment tokens, or environment-specific secret values
-- [ ] T023 [US3] Verify failure ordering keeps install, build, Azure login, and Static Web Apps deploy as separate failing steps in `.github/workflows/002-deploy-web.yml`
+- [x] T020 [US3] Add `azure/login@v1` authentication using `secrets.AZURE_CREDENTIALS` in `.github/workflows/002-deploy-web.yml`
+- [x] T021 [US3] Pass `secrets.AZURE_STATIC_WEB_APPS_API_TOKEN` and `secrets.GITHUB_TOKEN` to the Static Web Apps deploy step in `.github/workflows/002-deploy-web.yml`
+- [x] T022 [US3] Confirm `.github/workflows/002-deploy-web.yml` contains no hard-coded Azure credentials, deployment tokens, or environment-specific secret values
+- [x] T023 [US3] Verify failure ordering keeps install, build, Azure login, and Static Web Apps deploy as separate failing steps in `.github/workflows/002-deploy-web.yml`
 
 **Checkpoint**: User Story 3 is complete when credential usage is secret-backed and deployment failures are reported by the responsible workflow step.
 
@@ -99,8 +99,8 @@
 
 **Purpose**: Final consistency checks and handoff validation across all stories.
 
-- [ ] T024 [P] Review action versions and YAML indentation in `.github/workflows/002-deploy-web.yml` against repository standards in `AGENTS.md`
-- [ ] T025 [P] Verify required GitHub secrets and variables for this workflow are documented in `AGENTS.md`
+- [x] T024 [P] Review action versions and YAML indentation in `.github/workflows/002-deploy-web.yml` against repository standards in `AGENTS.md`
+- [x] T025 [P] Verify required GitHub secrets and variables for this workflow are documented in `AGENTS.md`
 - [ ] T026 Run the full sprint done validation from `specs/002-deploy-web/quickstart.md` for `.github/workflows/002-deploy-web.yml`
 
 ---

@@ -6,3 +6,15 @@ coverage/
 .env.local
 .DS_Store
 generated-pipeline.yml
+build/
+.env*
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+bin/
+obj/
+*.user
+*.suo
+packages/
