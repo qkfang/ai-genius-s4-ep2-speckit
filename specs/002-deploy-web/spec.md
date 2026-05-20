@@ -5,6 +5,18 @@
 **Status**: Draft  
 **Input**: User description: "GitHub Actionsを使用して、AI GeniusのReactフロントエンドWebアプリをデプロイしてください。フロントエンドは `src/ai-genius-web` にあるReact + Viteアプリケーションです。新しいGitHub Actionsワークフローのファイル名は `002-deploy-web.yml` とし、`001-deploy-infra.yml` と同様の環境（ENVIRONMENT）および同時実行制御（concurrency）に従うこと。mainブランチへのプッシュごと、および `workflow_dispatch` でトリガーされるようにすること。依存関係のインストール（`npm ci`）とReactアプリのビルド（`npm run build`）を実行すること。ビルド成果物（`dist/`）をAzure Static Web Appsへデプロイすること。`azure/login@v1` アクションを使用し、`secrets.AZURE_CREDENTIALS` を利用すること。`Azure/static-web-apps-deploy@v1` アクションを使用し、`secrets.AZURE_STATIC_WEB_APPS_API_TOKEN` を利用すること。"
 
+## Clarifications
+
+### Session 2026-05-20
+
+- Q: What frontend application stack and location should the workflow target? → A: React 18 + Vite at `src/ai-genius-web`.
+- Q: What build output should be deployed? → A: The generated `dist/` directory.
+- Q: Which deployment action should publish to Azure Static Web Apps? → A: `Azure/static-web-apps-deploy@v1`.
+- Q: Which repository secrets are required for deployment? → A: `AZURE_CREDENTIALS` and `AZURE_STATIC_WEB_APPS_API_TOKEN`.
+- Q: Which workflow variables configure the frontend deployment? → A: `ENVIRONMENT`, `APP_NAME`, and `VITE_API_URL`.
+- Q: Which Static Web Apps SKU should each constrained environment use? → A: `dev` uses Free; `prod` uses Standard.
+- Q: How should workflow concurrency behave when a new run starts? → A: Group by workflow and ref; cancel older in-progress runs.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Automatic Frontend Deployment on Main Push (Priority: P1)
@@ -35,6 +47,7 @@ A developer or operator needs to redeploy the frontend on demand, such as after 
 
 1. **Given** the workflow is available in GitHub Actions, **When** a user starts it manually, **Then** the workflow accepts an environment choice of `dev`, `qa`, or `prod`.
 2. **Given** a manual run targets `qa` or `prod`, **When** the workflow executes, **Then** the selected environment is used consistently for environment protection and deployment configuration.
+3. **Given** a manual run targets `dev` or `prod`, **When** the workflow deploys to Azure Static Web Apps, **Then** the deployment targets an environment resource configured with the required SKU: Free for `dev` and Standard for `prod`.
 
 ---
 
@@ -67,23 +80,28 @@ A repository administrator reviews the frontend deployment process. The workflow
 - **FR-001**: The repository MUST include a GitHub Actions workflow file named `.github/workflows/002-deploy-web.yml` for the AI Genius frontend deployment.
 - **FR-002**: The workflow MUST trigger automatically on every push to the `main` branch.
 - **FR-003**: The workflow MUST support manual `workflow_dispatch` runs with an `environment` input whose allowed values are `dev`, `qa`, and `prod`, defaulting to `dev`.
-- **FR-004**: The workflow MUST define the same environment variable pattern as the infrastructure workflow, including `ENVIRONMENT` resolving to the selected manual input or `dev` for push-triggered runs.
-- **FR-005**: The workflow MUST define the same concurrency behavior as the infrastructure workflow, with a group scoped to workflow name and git ref and with in-progress runs cancelled when superseded.
-- **FR-006**: The workflow MUST run from the frontend application located at `src/ai-genius-web`.
-- **FR-007**: The workflow MUST install frontend dependencies using the clean dependency installation command before building.
-- **FR-008**: The workflow MUST build the React frontend application before any deployment step runs.
+- **FR-004**: The workflow MUST define the same environment variable pattern as the infrastructure workflow, including `ENVIRONMENT` resolving to the selected manual input or `dev` for push-triggered runs and `APP_NAME` resolving from the repository variable `vars.APP_NAME`.
+- **FR-005**: The workflow MUST define the same concurrency behavior as the infrastructure workflow, with the concurrency group based on workflow name and git ref and with older in-progress runs cancelled when a newer run starts for the same group.
+- **FR-006**: The workflow MUST run from the React 18 + Vite frontend application located at `src/ai-genius-web`.
+- **FR-007**: The workflow MUST install frontend dependencies using `npm ci` before building.
+- **FR-008**: The workflow MUST build the React frontend application using `npm run build` before any deployment step runs.
 - **FR-009**: The workflow MUST deploy only the generated `dist/` build output to Azure Static Web Apps.
 - **FR-010**: The workflow MUST authenticate to Azure using the `azure/login@v1` action with `secrets.AZURE_CREDENTIALS`.
 - **FR-011**: The workflow MUST deploy to Azure Static Web Apps using the `Azure/static-web-apps-deploy@v1` action with `secrets.AZURE_STATIC_WEB_APPS_API_TOKEN`.
 - **FR-012**: The workflow MUST use `secrets.GITHUB_TOKEN` only for the repository token expected by the Static Web Apps deployment action.
 - **FR-013**: The workflow MUST fail fast when dependency installation, build, Azure authentication, or Static Web Apps deployment fails.
 - **FR-014**: The workflow MUST NOT contain hard-coded Azure credentials, deployment tokens, or environment-specific secret values.
+- **FR-015**: The workflow MUST provide the frontend build with `VITE_API_URL` from the GitHub Actions variable `vars.VITE_API_URL`.
+- **FR-016**: The deployment process MUST target Azure Static Web Apps resources configured with the Free SKU for `dev` and the Standard SKU for `prod`.
 
 ### Key Entities
 
 - **Frontend Deployment Workflow**: The GitHub Actions workflow responsible for building and publishing the AI Genius web frontend.
 - **Target Environment**: The selected deployment environment value (`dev`, `qa`, or `prod`) used to align the frontend deployment with repository environment rules and configuration.
 - **Frontend Build Output**: The production-ready `dist/` artifact generated from the React frontend application.
+- **Frontend API URL Variable**: The GitHub Actions variable `VITE_API_URL` used by the Vite build to configure the frontend API endpoint.
+- **Application Name Variable**: The repository variable `APP_NAME` used by the workflow to align frontend deployment configuration with infrastructure naming.
+- **Static Web Apps SKU Policy**: The environment-specific hosting tier requirement for Azure Static Web Apps, with Free for `dev` and Standard for `prod`.
 - **Azure Credentials Secret**: The repository secret used by the workflow to authenticate to Azure.
 - **Static Web Apps Deployment Token**: The repository secret used by the workflow to publish the build output to Azure Static Web Apps.
 
@@ -98,12 +116,17 @@ A repository administrator reviews the frontend deployment process. The workflow
 - **SC-005**: 100% of successful deployments use generated build output rather than source files as the published site content.
 - **SC-006**: Repository review confirms zero hard-coded Azure credential or deployment token values in the workflow file.
 - **SC-007**: If dependency installation, build, authentication, or deployment fails, the workflow reports failure and does not mark the deployment as successful.
+- **SC-008**: Deployment readiness review confirms the `dev` Static Web Apps resource uses Free SKU and the `prod` Static Web Apps resource uses Standard SKU before each environment is considered ready.
 
 ## Assumptions
 
 - The infrastructure workflow already provisions or identifies the Azure Static Web Apps resource needed by this frontend deployment.
 - Repository secret `AZURE_CREDENTIALS` contains the Azure service principal JSON required by `azure/login@v1`.
 - Repository secret `AZURE_STATIC_WEB_APPS_API_TOKEN` contains a valid Azure Static Web Apps deployment token for the target app.
+- Repository variable `APP_NAME` contains the application base name used by the infrastructure workflow.
+- GitHub Actions variable `VITE_API_URL` contains the API endpoint consumed by the React frontend build.
+- Static Web Apps SKU assignment is handled by environment provisioning; this frontend workflow deploys to the target app and does not change the SKU.
+- The `qa` Static Web Apps SKU follows the existing environment provisioning policy because only `dev` and `prod` SKU requirements are specified for this feature.
 - The repository-provided `GITHUB_TOKEN` is available to workflow runs.
 - The frontend application's existing dependency lockfile and build script are valid for CI use.
 - Push-triggered deployments target `dev` by default, matching the existing infrastructure workflow behavior.
