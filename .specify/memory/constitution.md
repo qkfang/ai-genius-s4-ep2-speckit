@@ -1,31 +1,33 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (template) → 1.0.0
-Initial ratification — constitution filled from blank template.
+Version change: 1.0.0 -> 2.0.0
+Reason: replaced the standalone Tested principle with Demo Session and aligned
+the constitution to the user-supplied core principles for AI Genius.
 
 Modified principles:
-  [PRINCIPLE_1_NAME] → I. Security-First
-  [PRINCIPLE_2_NAME] → II. Cloud-Native
-  [PRINCIPLE_3_NAME] → III. CI/CD-Driven
-  [PRINCIPLE_4_NAME] → IV. Simplicity
-  [PRINCIPLE_5_NAME] → V. Tested
+  I. Security-First -> I. Security-First
+  II. Cloud-Native -> II. Cloud-Native
+  III. CI/CD-Driven -> III. CI/CD-Driven
+  IV. Simplicity -> IV. Simplicity
+  V. Tested -> V. Demo Session
 
-Added sections:
-  - Technology Stack (replaces generic [SECTION_2_NAME])
-  - Development Workflow (replaces generic [SECTION_3_NAME])
+Added sections: none
 
-Removed sections: none
+Removed sections:
+  - Standalone Tested principle; build and validation expectations now live under
+    CI/CD-Driven and Development Workflow.
 
 Templates reviewed:
-  ✅ .specify/templates/plan-template.md
-     — Constitution Check gate present; dynamically reads this file. No update needed.
-  ✅ .specify/templates/spec-template.md
-     — Generic; no principle-specific markers. No update needed.
-  ✅ .specify/templates/tasks-template.md
-     — Generic task structure; no principle-specific markers. No update needed.
-  ✅ .github/prompts/*.prompt.md
-     — All are minimal frontmatter stubs; no CLAUDE-only or outdated references found.
+  ✅ .specify/templates/plan-template.md — updated Constitution Check gates.
+  ✅ .specify/templates/spec-template.md — reviewed; no changes required.
+  ✅ .specify/templates/tasks-template.md — reviewed; no changes required.
+  ✅ .specify/templates/commands/*.md — not present in this repository.
+  ✅ .github/prompts/*.prompt.md — reviewed; no outdated agent-specific names found.
+  ✅ specs/constitution.md — updated to mirror this constitution.
+   ✅ specs/001-bicep-deploy/plan.md — updated old principle references.
+  ✅ AGENTS.md — updated API runtime references from .NET 9 to .NET 10.
+  ✅ docs/guide.md — updated API overview from .NET 9 to .NET 10.
 
 Deferred TODOs: none
 -->
@@ -36,103 +38,125 @@ Deferred TODOs: none
 
 ### I. Security-First
 
-All user inputs MUST be validated at the API boundary before processing.
-HTTPS is required for all production endpoints; plain-HTTP MUST NOT be exposed.
-No credentials, tokens, API keys, or other secrets may be committed to source
-code. All sensitive values MUST be stored in GitHub Secrets or Azure Key Vault
-and injected at runtime.
+Production traffic MUST use HTTPS only. Plain HTTP MAY be used for local
+development examples, but it MUST NOT be exposed as a production endpoint.
+Credentials, tokens, connection strings, API keys, deployment tokens, and other
+secrets MUST NOT be committed to source code. Sensitive values MUST be provided
+through GitHub Secrets, environment variables, or Azure-managed secret stores.
 
-**Rationale**: Security vulnerabilities discovered post-deployment are costly and
-reputationally damaging. Enforcing these constraints at the design stage—before
-code is written—eliminates entire classes of OWASP Top 10 risk.
+API input that crosses the backend boundary MUST be validated before use. Any
+feature that changes authentication, authorization, deployment credentials, or
+public network exposure MUST call out the security impact in its spec or plan.
+
+**Rationale**: AI Genius is deployed through public cloud endpoints. Keeping
+secrets out of code and requiring encrypted production transport prevents the
+highest-impact mistakes in the main demo and production paths.
 
 ### II. Cloud-Native
 
-All Azure infrastructure MUST be defined as code using Azure Bicep templates
-located in `bicep/`. Resources MUST be tagged with at minimum: `app`,
-`component`, `environment`, and `managedBy=bicep`. All provisioning MUST be
-idempotent and executed via `az deployment group create`; no manual
-portal-based resource creation is permitted.
+Azure infrastructure MUST be defined as Infrastructure as Code using Azure Bicep
+under `bicep/`. App Service, Static Web Apps, resource groups, deployment
+parameters, and environment-specific changes MUST be represented in Bicep or in
+the GitHub Actions configuration that invokes Bicep.
 
-**Rationale**: IaC ensures environments are reproducible, auditable, and
-consistent across development, staging, and production.
+Resource provisioning MUST be repeatable and idempotent. Manual portal changes
+MUST NOT be required for the documented happy path. Environment differences
+MUST be captured in parameter files, repository variables, GitHub environment
+variables, or secrets.
+
+**Rationale**: Bicep keeps Azure resources reviewable, reproducible, and easy to
+explain during a demo session.
 
 ### III. CI/CD-Driven
 
-Every merge to `main` MUST trigger automated build and deployment via GitHub
-Actions. All pipeline checks MUST pass before a pull request may be merged.
-No feature or fix may be deployed to Azure through any means other than the
-approved workflow pipelines.
+Every merge to `main` MUST trigger the relevant GitHub Actions build and
+deployment workflow. The frontend MUST build before deployment, the API MUST
+publish before deployment, and infrastructure changes MUST deploy through the
+Bicep workflow.
 
-**Rationale**: Automated delivery removes human error from the release path and
-provides a repeatable, auditable deployment record.
+Deployment credentials MUST come from approved GitHub Secrets or federated Azure
+authentication. Manual workflow dispatch MAY be supported for demonstrations and
+retries, but it MUST follow the same build and deployment steps as the merge
+path.
+
+**Rationale**: The repository demonstrates spec-driven delivery. Automated
+pipelines make the delivery path repeatable and reduce manual release drift.
 
 ### IV. Simplicity
 
-Standard libraries and built-in GitHub Actions MUST be preferred over
-third-party dependencies. The simplest implementation that satisfies the spec is
-the required implementation. Each component MUST have a single, clearly stated
-responsibility. Complexity beyond what the current spec demands MUST NOT be
-introduced.
+Implementations MUST prefer the standard libraries, built-in framework features,
+and established repository patterns already present in AI Genius. New
+dependencies, services, abstractions, or workflow stages MUST be justified by a
+current spec requirement.
 
-**Rationale**: Unnecessary complexity increases maintenance burden, onboarding
-friction, and the surface area for defects.
+Features MUST be scoped to the smallest implementation that satisfies the main
+use case. Refactors, framework changes, and generalized infrastructure MUST NOT
+be added unless they directly support the requested feature.
 
-### V. Tested
+**Rationale**: The project is a focused demo application. Simplicity keeps the
+codebase understandable, quick to iterate, and easy to present live.
 
-Every API route MUST be covered by at least one automated unit or integration
-test. The frontend MUST build cleanly (`npm run build` with zero errors) on
-every CI run. Test failures MUST block merge to `main`.
+### V. Demo Session
 
-**Rationale**: Automated tests are the enforcement mechanism for all other
-principles; without them, compliance is unverifiable.
+Specs, plans, tasks, workflows, and documentation MUST optimize for a concise,
+repeatable demo flow. The happy path MUST be clear enough to run in a live
+session without extra research. Standard practices MUST be used unless the user
+or current spec explicitly requires a different path.
+
+Work MUST prioritize the main use case over rare edge cases. Validation MUST be
+fast enough to support iteration during the session, using build, lint,
+deployment, or smoke-test checks that match the changed surface area.
+
+**Rationale**: AI Genius exists to teach and demonstrate Spec-Kit, GitHub
+Actions, Azure Bicep, React, and a .NET API. A short, conventional workflow makes
+the lesson easier to follow and reproduce.
 
 ## Technology Stack
 
-| Layer | Technology |
-|---|---|
-| API backend | .NET 9 Minimal API (`src/ai-genius-api/`) |
-| Frontend | React 18 + Vite (`src/ai-genius-web/`) |
-| Infrastructure as Code | Azure Bicep (`bicep/`) |
-| CI/CD | GitHub Actions (`.github/workflows/`) |
-| Cloud platform | Microsoft Azure |
-| Secret management | GitHub Secrets + Azure Key Vault |
+| Layer                  | Technology                                     |
+| ---------------------- | ---------------------------------------------- |
+| API backend            | .NET 10 Minimal API (`src/ai-genius-api/`)     |
+| Frontend               | React 18 + Vite (`src/ai-genius-web/`)         |
+| Infrastructure as Code | Azure Bicep (`bicep/`)                         |
+| CI/CD                  | GitHub Actions (`.github/workflows/`)          |
+| Cloud platform         | Microsoft Azure                                |
+| Secret management      | GitHub Secrets and Azure-managed secret stores |
 
-All technology choices MUST be justified against the Simplicity principle.
-Upgrades to major versions require a spec artifact before implementation.
+Technology choices MUST support the Core Principles. Major technology changes
+MUST be represented in a spec artifact before implementation.
 
 ## Development Workflow
 
-1. **Spec-first**: No feature may be implemented without a corresponding spec
-   artifact at `specs/<feature-id>/spec.md`, reviewed and committed to a
-   feature branch.
-2. **Branch naming**: Feature branches MUST follow the pattern
-   `<NNN>-<short-description>` (e.g., `002-speckit-cicd`).
-3. **Pull requests**: All PRs target `main` and MUST pass CI (build + tests)
-   before merge. At least one peer review is REQUIRED.
-4. **Deployment**: Merges to `main` trigger the relevant GitHub Actions
-   workflows automatically. Manual Azure deployments are prohibited.
-5. **Spec metadata**: Every `spec.md` MUST include YAML front-matter with
-   `feature`, `risk` (low/medium/high), `breaking` (true/false), and
-   `reviewer-team` fields.
+1. **Spec-first**: Feature work MUST have a corresponding spec artifact under
+   `specs/<feature-id>/` unless the change is documentation-only or a small
+   mechanical fix.
+2. **Plan with gates**: Plans MUST evaluate Security-First, Cloud-Native,
+   CI/CD-Driven, Simplicity, and Demo Session before implementation begins.
+3. **Build before deploy**: Frontend, API, and infrastructure workflows MUST run
+   their relevant build or validation step before deployment.
+4. **Secret handling**: Secrets MUST be configured outside source code and
+   referenced through GitHub Actions or Azure runtime configuration.
+5. **Demo-ready documentation**: Quickstarts and guides MUST describe the
+   shortest repeatable happy path for local development and Azure deployment.
 
 ## Governance
 
-This constitution supersedes all other conventions, README guidance, and informal
-agreements. It governs every specification, plan, implementation decision, and
-review in this repository.
+This constitution supersedes conflicting repository guidance, informal
+agreements, and prior Spec-Kit conventions for this project.
 
-**Amendment procedure**: Any amendment MUST be proposed as a pull request
-against `.specify/memory/constitution.md` (this file) and `specs/constitution.md`,
-with a clear rationale and an updated version number following semantic
-versioning. The PR requires at least one approving review before merge.
+**Amendment procedure**: Any amendment MUST update
+`.specify/memory/constitution.md` and `specs/constitution.md` together, include a
+Sync Impact Report, and review dependent templates or runtime guidance for
+drift.
 
 **Versioning policy**:
-- MAJOR — removal or backward-incompatible redefinition of a principle.
-- MINOR — new principle, section added, or materially expanded guidance.
-- PATCH — clarifications, wording improvements, or typo corrections.
 
-**Compliance review**: Adherence to this constitution MUST be verified at each
-PR review and during `/speckit.plan` Constitution Check gates.
+- MAJOR: removal or backward-incompatible redefinition of a principle.
+- MINOR: new principle, new section, or materially expanded guidance.
+- PATCH: clarification, wording improvement, typo fix, or non-semantic update.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-03-22
+**Compliance review**: `/speckit.plan` Constitution Check gates and pull request
+reviews MUST verify adherence to the active Core Principles. Any violation MUST
+be documented with a simpler alternative and the reason it was rejected.
+
+**Version**: 2.0.0 | **Ratified**: 2026-03-22 | **Last Amended**: 2026-05-20

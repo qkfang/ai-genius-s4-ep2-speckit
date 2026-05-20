@@ -21,16 +21,15 @@ Add a GitHub Actions workflow (`.github/workflows/deploy-infra.yml`) that authen
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+_GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Principle | Status | Notes |
-|-----------|--------|-------|
-| **Security-First** — no secrets committed; HTTPS-only | ✅ PASS | OIDC (client-id, tenant-id, subscription-id); no `AZURE_CREDENTIALS` |
-| **Cloud-Native** — Bicep IaC, tagged resources, idempotent deployments | ✅ PASS | `az deployment group create` is idempotent; all resources tagged `app`, `environment`, `managedBy=bicep` |
-| **CI/CD-Driven** — every merge triggers automated deployment | ✅ PASS | `on: push: branches: [main]` is the primary trigger |
-| **Spec-Gated** — spec artifact present before planning | ✅ PASS | `specs/001-bicep-deploy/spec.md` exists |
-| **Simplicity** — prefer standard Actions over third-party | ✅ PASS | Only `actions/checkout@v4` and `azure/login@v2` (official Microsoft action) |
-| **Tested** — builds pass; no test failures block merge | ✅ PASS | `az deployment what-if` validates template before apply; API/web tests are downstream concerns |
+| Principle                                                              | Status  | Notes                                                                                                        |
+| ---------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------ |
+| **Security-First** — no secrets committed; HTTPS-only                  | ✅ PASS | OIDC (client-id, tenant-id, subscription-id); no `AZURE_CREDENTIALS`                                         |
+| **Cloud-Native** — Bicep IaC, tagged resources, idempotent deployments | ✅ PASS | `az deployment group create` is idempotent; all resources tagged `app`, `environment`, `managedBy=bicep`     |
+| **CI/CD-Driven** — every merge triggers automated deployment           | ✅ PASS | `on: push: branches: [main]` is the primary trigger                                                          |
+| **Simplicity** — prefer standard Actions over third-party              | ✅ PASS | Only `actions/checkout@v4` and `azure/login@v2` (official Microsoft action)                                  |
+| **Demo Session** — concise and repeatable happy path                   | ✅ PASS | One workflow path supports push and manual dispatch; `az deployment what-if` validates template before apply |
 
 **Gate result**: All principles pass. No violations. Proceed to Phase 0.
 

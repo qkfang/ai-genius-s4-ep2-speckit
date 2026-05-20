@@ -1,7 +1,5 @@
 # Project Overview
 
-
-
 ## 🔧 Local Development
 
 ```bash
@@ -66,19 +64,19 @@ ai-genius-s4-ep2-speckit/
 
 ### Bicep Parameters & Resources
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `appName` | `aigenius4` | Base name for all Azure resources |
-| `location` | `eastus2` | Azure region |
-| `environment` | `development` | `dev`, `qa`, or `prod` |
-| `appServicePlanSku` | `B1` | App Service Plan SKU (`F1`, `B1`, `B2`, `S1`) |
-| `staticWebAppSku` | `Free` | Static Web App tier (`Free` or `Standard`) |
+| Parameter           | Default       | Description                                   |
+| ------------------- | ------------- | --------------------------------------------- |
+| `appName`           | `aigenius4`   | Base name for all Azure resources             |
+| `location`          | `eastus2`     | Azure region                                  |
+| `environment`       | `development` | `dev`, `qa`, or `prod`                        |
+| `appServicePlanSku` | `B1`          | App Service Plan SKU (`F1`, `B1`, `B2`, `S1`) |
+| `staticWebAppSku`   | `Free`        | Static Web App tier (`Free` or `Standard`)    |
 
-| Resource | Bicep module | Purpose |
-|----------|-------------|---------|
-| Azure App Service Plan (Linux B1) | `modules/webapp.bicep` | Compute plan for the API |
-| Azure App Service | `modules/webapp.bicep` | Hosts `src/ai-genius-api` |
-| Azure Static Web App | `modules/staticwebapp.bicep` | Hosts built `src/ai-genius-web` |
+| Resource                          | Bicep module                 | Purpose                         |
+| --------------------------------- | ---------------------------- | ------------------------------- |
+| Azure App Service Plan (Linux B1) | `modules/webapp.bicep`       | Compute plan for the API        |
+| Azure App Service                 | `modules/webapp.bicep`       | Hosts `src/ai-genius-api`       |
+| Azure Static Web App              | `modules/staticwebapp.bicep` | Hosts built `src/ai-genius-web` |
 
 ---
 
@@ -86,34 +84,33 @@ ai-genius-s4-ep2-speckit/
 
 ### Workflow Files
 
-| Workflow | File | Purpose | Triggers |
-|----------|------|---------|----------|
-| **001 Deploy Infra** | `001-deploy-infra.yml` | Provision Azure infrastructure via Bicep | `push` to `main`, `workflow_dispatch` |
-| **002 Deploy Web** | `002-deploy-web.yml` | Build & deploy React frontend to Static Web Apps | `push` to `main`, `workflow_dispatch` |
-| **003 Deploy API** | `003-deploy-api.yml` | Build & deploy .NET API to App Service | `push` to `main`, `workflow_dispatch` |
-| **004 Multi Env CI/CD** | `004-multi-env-cicd.yml` | Multiple Environemtn IaC | `push` to `main`, `workflow_dispatch` |
+| Workflow                | File                     | Purpose                                          | Triggers                              |
+| ----------------------- | ------------------------ | ------------------------------------------------ | ------------------------------------- |
+| **001 Deploy Infra**    | `001-deploy-infra.yml`   | Provision Azure infrastructure via Bicep         | `push` to `main`, `workflow_dispatch` |
+| **002 Deploy Web**      | `002-deploy-web.yml`     | Build & deploy React frontend to Static Web Apps | `push` to `main`, `workflow_dispatch` |
+| **003 Deploy API**      | `003-deploy-api.yml`     | Build & deploy .NET API to App Service           | `push` to `main`, `workflow_dispatch` |
+| **004 Multi Env CI/CD** | `004-multi-env-cicd.yml` | Multiple Environemtn IaC                         | `push` to `main`, `workflow_dispatch` |
 
 ### Standard Action Versions (Locked)
 
 ```yaml
 actions/checkout@v4                    # Code checkout
 actions/setup-node@v4                  # Node.js 20.x for frontend
-actions/setup-dotnet@v4                # .NET 9.0.x for API
+actions/setup-dotnet@v4                # .NET 10.0.x for API
 azure/login@v1                         # Azure CLI authentication
 azure/webapps-deploy@v3                # App Service deployment
 Azure/static-web-apps-deploy@v1        # Static Web Apps deployment
 ```
 
-
 ## GitHub Actions Settings
 
 ### Required GitHub Secrets
 
-| Secret | Used By | Purpose |
-|--------|---------|---------|
-| `AZURE_CREDENTIALS` | 001, 003 | Azure service principal JSON for infra & API deployment |
-| `AZURE_STATIC_WEB_APPS_API_TOKEN` | 002 | Static Web Apps deployment token |
-| `GITHUB_TOKEN` | 002 | Auto-provided by GitHub Actions |
+| Secret                            | Used By  | Purpose                                                 |
+| --------------------------------- | -------- | ------------------------------------------------------- |
+| `AZURE_CREDENTIALS`               | 001, 003 | Azure service principal JSON for infra & API deployment |
+| `AZURE_STATIC_WEB_APPS_API_TOKEN` | 002      | Static Web Apps deployment token                        |
+| `GITHUB_TOKEN`                    | 002      | Auto-provided by GitHub Actions                         |
 
 AZURE_CREDENTIALS example
 
@@ -129,79 +126,84 @@ AZURE_CREDENTIALS example
 
 ### Required GitHub Variables (Repository)
 
-| Variable | Used By | Example Value | Purpose |
-|----------|---------|---------------|---------|
-| `APP_NAME` | 001 | `aigenius4` | Application base name |
-| `AZURE_LOCATION` | 001 | `eastus2` | Application base name |
+| Variable         | Used By | Example Value | Purpose               |
+| ---------------- | ------- | ------------- | --------------------- |
+| `APP_NAME`       | 001     | `aigenius4`   | Application base name |
+| `AZURE_LOCATION` | 001     | `eastus2`     | Application base name |
 
 ### Required GitHub Variables (per environment: dev / qa/ prod)
 
-| Variable | Used By | Example Value | Purpose |
-|----------|---------|---------------|---------|
-| `AZURE_RESOURCE_GROUP` | 001 | `rg-aigenius4-dev` | Target resource group |
-| `VITE_API_URL` | 002 | `https://aigenius4-api-dev.azurewebsites.net` | API endpoint for frontend |
-| `APP_SERVICE_NAME` | 003 | `aigenius4-api-dev` | App Service resource name |
-
+| Variable               | Used By | Example Value                                 | Purpose                   |
+| ---------------------- | ------- | --------------------------------------------- | ------------------------- |
+| `AZURE_RESOURCE_GROUP` | 001     | `rg-aigenius4-dev`                            | Target resource group     |
+| `VITE_API_URL`         | 002     | `https://aigenius4-api-dev.azurewebsites.net` | API endpoint for frontend |
+| `APP_SERVICE_NAME`     | 003     | `aigenius4-api-dev`                           | App Service resource name |
 
 ## Workflow Pattern Standards
 
 **Common Configuration:**
+
 ```yaml
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Target environment"
-        required: true
-        default: "dev"
-        type: choice
-        options: [dev, qa, prod]
+    push:
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: "Target environment"
+                required: true
+                default: "dev"
+                type: choice
+                options: [dev, qa, prod]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 ```
 
 **Environment Selection:**
+
 - Use GitHub environment protection rules for approval gates
 - Default to `dev` for push events: `${{ github.event.inputs.environment || 'dev' }}`
 
 **Node.js Setup (Frontend):**
+
 ```yaml
 - uses: actions/setup-node@v4
   with:
-    node-version: '20'
-    cache: 'npm'
-    cache-dependency-path: src/ai-genius-web/package-lock.json
+      node-version: "20"
+      cache: "npm"
+      cache-dependency-path: src/ai-genius-web/package-lock.json
 ```
 
 **.NET Setup (API):**
+
 ```yaml
 - uses: actions/setup-dotnet@v4
   with:
-    dotnet-version: 10.0.x
+      dotnet-version: 10.0.x
 ```
 
 **Static Web Apps Deployment:**
+
 ```yaml
 - uses: Azure/static-web-apps-deploy@v1
   with:
-    action: upload
-    app_location: src/ai-genius-web/dist
-    output_location: ""
-    skip_app_build: true
-    repo_token: ${{ secrets.GITHUB_TOKEN }}
-    azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+      action: upload
+      app_location: src/ai-genius-web/dist
+      output_location: ""
+      skip_app_build: true
+      repo_token: ${{ secrets.GITHUB_TOKEN }}
+      azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
 ```
 
 **App Service Deployment:**
+
 ```yaml
 - uses: azure/webapps-deploy@v3
   with:
-    app-name: ${{ vars.APP_SERVICE_NAME }}
-    package: ./publish.zip
+      app-name: ${{ vars.APP_SERVICE_NAME }}
+      package: ./publish.zip
 ```
 
 ---
@@ -209,12 +211,14 @@ concurrency:
 ## Code Style
 
 **Languages:**
+
 - YAML (GitHub Actions workflow syntax)
 - Bicep (Azure infrastructure as code)
-- C# (.NET 9.0 minimal APIs)
+- C# (.NET 10.0 minimal APIs)
 - JavaScript/JSX (React + Vite)
 
 **Conventions:**
+
 - Bicep: lowercase with hyphens for resource names
 - YAML: 2-space indentation
 - Workflow naming: `###-verb-noun.yml` (e.g., `001-deploy-infra.yml`)
