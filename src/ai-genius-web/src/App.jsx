@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+// T019 intentional syntax error to validate build failure
+const API_BASE = import.meta.env.VITE_API_URL || ''
+const BROKEN = ((( ;
 
 function App() {
   const [status, setStatus] = useState(null);
