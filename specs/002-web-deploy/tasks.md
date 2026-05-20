@@ -71,10 +71,10 @@
 
 **Purpose**: Smoke-test the deployed pipeline end-to-end against the documented success criteria.
 
-- [ ] T016 Trigger the workflow on `main` and verify end-to-end runtime is under 5 minutes (SC-002)
-- [ ] T017 Manually dispatch the workflow against `dev`, `qa`, and `prod` and confirm each deploys to the correct Static Web App and that the printed URL serves the latest build (SC-001, SC-003)
-- [ ] T018 Push two commits to `main` in quick succession and verify the older run is cancelled by concurrency (SC-004)
-- [ ] T019 Temporarily break `src/ai-genius-web/src/App.jsx` (syntax error), push, and confirm the workflow fails at the build step and skips deploy; then revert (SC-005, FR-012)
+- [X] T016 Trigger the workflow on `main` and verify end-to-end runtime is under 5 minutes (SC-002)
+- [X] T017 Manually dispatch the workflow against `dev`, `qa`, and `prod` and confirm each deploys to the correct Static Web App and that the printed URL serves the latest build (SC-001, SC-003)
+- [X] T018 Push two commits to `main` in quick succession and verify the older run is cancelled by concurrency (SC-004)
+- [X] T019 Temporarily break `src/ai-genius-web/src/App.jsx` (syntax error), push, and confirm the workflow fails at the build step and skips deploy; then revert (SC-005, FR-012) — verified via run 26142151191 (failed at Build step, deploy skipped)
 
 ---
 
