@@ -1,6 +1,6 @@
 # Feature Specification: React Frontend Web Deployment Workflow
 
-**Feature Branch**: `003-002-deploy-web`  
+**Feature Branch**: `002-deploy-web`  
 **Created**: 2026-05-20  
 **Status**: Draft  
 **Input**: User description: "GitHub Actionsを使用して、AI GeniusのReactフロントエンドWebアプリをデプロイしてください。フロントエンドは `src/ai-genius-web` にあるReact + Viteアプリケーションです。新しいGitHub Actionsワークフローのファイル名は `002-deploy-web.yml` とし、`001-deploy-infra.yml` と同様の環境（ENVIRONMENT）および同時実行制御（concurrency）に従うこと。mainブランチへのプッシュごと、および `workflow_dispatch` でトリガーされるようにすること。依存関係のインストール（`npm ci`）とReactアプリのビルド（`npm run build`）を実行すること。ビルド成果物（`dist/`）をAzure Static Web Appsへデプロイすること。`azure/login@v1` アクションを使用し、`secrets.AZURE_CREDENTIALS` を利用すること。`Azure/static-web-apps-deploy@v1` アクションを使用し、`secrets.AZURE_STATIC_WEB_APPS_API_TOKEN` を利用すること。"

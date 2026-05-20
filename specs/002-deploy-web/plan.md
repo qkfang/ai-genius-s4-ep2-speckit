@@ -1,6 +1,6 @@
 # Implementation Plan: React Frontend Web Deployment Workflow
 
-**Branch**: `003-002-deploy-web` | **Date**: 2026-05-20 | **Spec**: [spec.md](spec.md)  
+**Branch**: `002-deploy-web` | **Date**: 2026-05-20 | **Spec**: [spec.md](spec.md)  
 **Input**: Feature specification from `/specs/002-deploy-web/spec.md`; user requested a 1-week sprint plan for the React 18 + Vite app in `src/ai-genius-web`.
 
 ## Summary
