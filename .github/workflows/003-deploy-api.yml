@@ -1,0 +1,79 @@
+# 003 Deploy API to Azure
+#
+# Builds the .NET 10 API in `src/ai-genius-api` as a self-contained linux-x64
+# package, zips it, and deploys it to the Azure App Service named by the
+# environment-scoped variable `APP_SERVICE_NAME`.
+#
+# Triggers:
+#   - push to `main`                  → deploys to `dev`
+#   - workflow_dispatch (env input)   → deploys to `dev` / `qa` / `prod`
+#
+# Required configuration:
+#   - Secret  (repo):        AZURE_CREDENTIALS    (service principal JSON)
+#   - Variable (per env):    APP_SERVICE_NAME     (target App Service name)
+#
+# See `specs/003-api-deploy/` for full design docs.
+name: 003 Deploy API to Azure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
+  APP_SERVICE_NAME: ${{ vars.APP_SERVICE_NAME }}
+
+jobs:
+  deploy-api:
+    name: Build and Deploy API
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish API (linux-x64, self-contained)
+        run: |
+          dotnet publish src/ai-genius-api/ai-genius-api.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -o ./publish
+
+      - name: Zip publish output
+        run: |
+          cd ./publish
+          zip -r ../publish.zip .
+
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_SERVICE_NAME }}
+          package: ./publish.zip
